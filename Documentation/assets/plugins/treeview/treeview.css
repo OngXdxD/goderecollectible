@@ -1,0 +1,110 @@
+.tree {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tree ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    margin-inline-start: 1em;
+    position: relative;
+}
+
+.tree ul ul {
+    margin-inline-start: 0.5em;
+}
+
+.tree ul:before {
+    content: "";
+    display: block;
+    width: 0;
+    position: absolute;
+    inset-block-start: 0;
+    inset-block-end: 0;
+    inset-inline-start: -10px;
+    border-inline-start: 1px dashed #e9e9e9;
+}
+
+.tree li {
+    margin: 0;
+    padding: 0.5em 1em 0.2em;
+    line-height: 2em;
+    color: #5d6162;
+    position: relative;
+    border: 1px dashed #e9e9e9;
+    margin: 10px 0;
+    border-radius: 5px;
+    line-height: 30px;
+}
+
+.tree li i {
+    margin-inline-end: 10px;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.tree ul li:before {
+    content: "";
+    display: block;
+    width: 10px;
+    height: 0;
+    border-block-start: 2px dashed #e9e9e9;
+    margin-block-start: -1px;
+    position: absolute;
+    inset-block-start: 22px;
+    inset-inline-start: -10px;
+}
+
+.tree ul li:last-child:before {
+    background: transparent;
+    height: auto;
+    inset-block-start: 22px;
+    inset-block-end: 0;
+}
+
+.indicator {
+    margin-inline-end: 5px;
+    color: #4fb7e3;
+}
+
+.tree li a {
+    text-decoration: none;
+    color: #5d6162;
+    font-size: 15px;
+}
+
+.tree li button {
+    text-decoration: none;
+    color: #5d6162;
+    border: none;
+    background: transparent;
+    margin: 0;
+    padding: 0;
+    outline: 0;
+}
+
+.tree li button:active,
+.tree li button:focus {
+    text-decoration: none;
+    color: #5d6162;
+    border: none;
+    background: transparent;
+    margin: 0;
+    padding: 0;
+    outline: 0;
+}
+
+.tree li.branch {
+    background: #fff;
+}
+
+.tree li.branch li {
+    background: #fff;
+}
+
+.tree li i {
+    display: inline-block;
+}
