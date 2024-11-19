@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build 2>&1 | findstr /V /C:\"API routes and middleware\"",
+    "build": "next build 2>&1 | grep -v 'API routes and middleware'",
     "start": "next start",
     "lint": "next lint",
     "sass": "sass ./public/assets/scss:./public/assets/css/",
@@ -29,6 +29,7 @@
     "eslint": "9.5.0",
     "filepond-plugin-image-exif-orientation": "^1.0.11",
     "filepond-plugin-image-preview": "^4.6.12",
+    "findstr": "^1.0.4",
     "firebase": "^10.12.0",
     "formik": "^2.4.6",
     "gridjs-react": "^6.1.1",
@@ -67,7 +68,5 @@
     "swiper": "^11.1.3",
     "yet-another-react-lightbox": "^3.19.0",
     "yup": "^1.4.0"
-  },
-  "devDependencies": {
   }
 }
