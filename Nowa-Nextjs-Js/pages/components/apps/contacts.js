@@ -12,7 +12,7 @@ const Contacts = () => {
 				</div>
 				<div className="justify-content-center">
 					<Button variant="" type="button" className="btn btn-primary">
-						<i className="fe fe-plus me-1"></i> Add New Contact
+						<i className="fe fe-plus me-1"></i> Add New Contact Testing
 					</Button>
 				</div>
 			</div>
