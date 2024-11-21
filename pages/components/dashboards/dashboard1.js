@@ -1,5 +1,6 @@
-import React from "react";
-import { Breadcrumb, Col, Row, Card, } from "react-bootstrap";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { Breadcrumb, Col, Row, Card, Toast } from "react-bootstrap";
 import dynamic from "next/dynamic";
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
 import * as Dashboarddata from "../../../shared/data/dashboards/dashboards1data";
@@ -8,6 +9,19 @@ import Link from "next/link";
 import Seo from "../../../shared/layout-components/seo/seo";
 import Pageheader from "../../../shared/layout-components/pageheader/pageheader";
 const Dashboard = () => {
+	const [show5, setShow5] = useState(false);
+	const router = useRouter();
+    const [showToast, setShowToast] = useState(false);
+    const [username, setUsername] = useState(""); 
+
+	useEffect(() => {
+        // Extract username from query parameters
+        const { username } = router.query;
+        if (username) {
+            setUsername(username); // Update username
+            setShowToast(true);    // Show toast notification
+        }
+    }, [router.query]);
 
 	return (
 		<>
@@ -15,6 +29,36 @@ const Dashboard = () => {
 			<React.Fragment>
 				<Pageheader title="DASHBOARD" heading="Dashboard" active="Sales" />
 				{/* <!-- row --> */}
+				<div
+					style={{
+						position: "fixed",
+						top: "20px",
+						right: "20px",
+						zIndex: 1050,
+					}}
+				>
+					<Toast
+                        id="successToast"
+                        className="toast colored-toast bg-success-transparent"
+                        role="alert"
+                        aria-live="assertive"
+                        onClose={() => setShowToast(false)}
+                        show={showToast}
+                        delay={3000}
+                        autohide
+                        aria-atomic="true"
+                    >
+                        <Toast.Header className="bg-success text-fixed-white">
+                            <img
+                                className="bd-placeholder-img rounded me-2"
+                                src="../../../assets/images/brand-logos/toggle-dark.png"
+                                alt="..."
+                            />
+                            <strong className="me-auto">Nowa</strong>
+                        </Toast.Header>
+                        <Toast.Body>Welcome back, {username}! You have successfully logged in.</Toast.Body>
+                    </Toast>
+				</div>
 				<Row>
 					<Col xxl={5} xl={12} lg={12} md={12} sm={12}>
 						<Row>

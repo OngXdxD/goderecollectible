@@ -42,6 +42,27 @@ export const MENUITEMS = [
 			},
 		],
 	},
+	{
+		path: "/components/dashboards/dashboard3",
+		type: "link",
+		active: false,
+		selected: false,
+		title: "Sales Order",
+	},
+	{
+		path: "/components/dashboards/dashboard3",
+		type: "link",
+		active: false,
+		selected: false,
+		title: "Invoice",
+	},
+	{
+		path: "/components/dashboards/dashboard3",
+		type: "link",
+		active: false,
+		selected: false,
+		title: "Purchase & Stock Inventory",
+	},
 
 	{
 		menutitle: "WEB APPS",

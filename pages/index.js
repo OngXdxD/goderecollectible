@@ -118,7 +118,7 @@ export default function AdminLogin() {
             localStorage.setItem('sessionTime', currentTime);
 
             // Redirect to the admin dashboard
-            window.location.href = '/components/dashboards/dashboard1';
+            window.location.href = `/components/dashboards/dashboard1?username=${encodeURIComponent(email)}`;
         } catch (error) {
             setErrorMessage('An error occurred during login.');
         }
