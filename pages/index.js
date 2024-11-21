@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useEffect } from "react";
 import Seo from "../shared/layout-components/seo/seo";
 
+const baseUrl = 'https://kakihobby.com';
+
 const Home = () => {
 	const [passwordshow1, setpasswordshow1] = useState(false);
 	const [err, setError] = useState("");
@@ -26,30 +28,34 @@ const Home = () => {
 		navigate.push(path);
 	};
 
-	const Login = (e) => {
+	const Login = async (e) => {
 		e.preventDefault();
-		auth.signInWithEmailAndPassword(email, password)
-			.then(user => {
-				console.log(user);
-				routeChange();
-			})
-			.catch(err => {
-				console.log(err);
-				setError(err.message);
-			});
-	};
-	const Login1 = () => {
-		if (data.email == "adminnextjs@gmail.com" && data.password == "1234567890") {
-			routeChange();
+	
+		try {
+			// Make API request for login
+			const response = await fetch(`${baseUrl}/api/bizadmin/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                email: email,
+				password: password
+            });
+	
+			// Check the API response, handle success
+			if (response.data && response.data.status === 'success') {
+				console.log('Login successful', response.data);
+				routeChange();  // Redirect to dashboard
+			} else {
+				setError('Invalid credentials or something went wrong.');
+			}
+		} catch (err) {
+			// Handle errors from API call
+			console.error('Error during login:', err);
+			setError('Failed to login. Please try again.');
 		}
-		else {
-			setError("The Auction details did not Match");
-			setData({
-				"email": "adminnextjs@gmail.com",
-				"password": "1234567890",
-			});
-		}
 	};
+	
 	useEffect(() => {
 		if (document.body) {
 			document.querySelector("body").classList.add("ltr", "error-page1", "bg-primary");
@@ -112,11 +118,11 @@ const Home = () => {
 																	<div className="panel-body tabs-menu-body border-0 p-3">
 																		<form action="#">
 																			<div className="form-group">
-																				<label>Email</label> <Form.Control type="email" placeholder="Email" name='email' defaultValue={email} onChange={changeHandler} />
+																				<label>Username</label> 
+																				<Form.Control type="email" placeholder="Email" name='email' defaultValue={email} onChange={changeHandler} />
 																			</div>
 																			<div className="form-group">
-																				<label htmlFor="signin-password" className=" d-block">Password
-																					<Link href="/components/authentication/resetpassword/resetbasic/" className="float-end text-primary">Forget password ?</Link></label>
+																				<label htmlFor="signin-password" className=" d-block">Password</label>
 																				<div className="input-group">
 																					<Form.Control className="form-control form-control-lg" id="signin-password"
 																						placeholder="Enter your password"
@@ -130,31 +136,15 @@ const Home = () => {
 																						<i className={`${passwordshow1 ? "ri-eye-line" : "ri-eye-off-line"} align-middle`}></i></button>
 																				</div>
 																			</div>
-																			<Link href="/components/dashboards/dashboard1" className="btn btn-primary btn-block" onClick={Login1}>Sign In</Link>
-																			<div className="mt-4 d-flex text-center justify-content-center mb-2">
-																				<Link href="#!" className=" me-3">
-																					<span className="btn-inner--icon"> <i className="ri-facebook-fill social-btn-icons fs-18 tx-prime"></i> </span>
-																				</Link>
-																				<Link href="#!" className=" me-3">
-																					<span className="btn-inner--icon"> <i className="ri-twitter-x-line social-btn-icons fs-18 tx-prime"></i> </span>
-																				</Link>
-																				<Link href="#!" className=" me-3">
-																					<span className="btn-inner--icon"> <i className="ri-linkedin-fill social-btn-icons fs-18 tx-prime"></i> </span>
-																				</Link>
-																				<Link href="#!" className=" me-3">
-																					<span className="btn-inner--icon"> <i className="ri-instagram-fill social-btn-icons fs-18 tx-prime"></i> </span>
-																				</Link>
-																			</div>
+																			<Link href="/components/dashboards/dashboard1" className="btn btn-primary btn-block" onClick={Login}>Sign In</Link>
+																			
 																		</form>
 
 																	</div>
 
 																</div>
 
-																<div className="main-signin-footer text-center mt-3">
-																	<p><Link href="/components/pages/authentication/forgot-password" className="mb-3">Forgot password?</Link></p>
-																	<p>Don't have an account? <Link href="/components/pages/authentication/sign-up">Create an Account</Link></p>
-																</div>
+																
 															</div>
 														</div>
 													</div>
