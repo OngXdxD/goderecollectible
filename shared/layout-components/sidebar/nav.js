@@ -44,24 +44,72 @@ export const MENUITEMS = [
 	},
 	{
 		path: "/components/dashboards/dashboard3",
-		type: "link",
+		type: "sub",
 		active: false,
 		selected: false,
 		title: "Sales Order",
+		children: [
+			{
+				path: "/components/dashboards/dashboard1",
+				type: "link",
+				active: false,
+				selected: false,
+				title: "Create Sales Order",
+			},
+			{
+				path: "/components/dashboards/dashboard1",
+				type: "link",
+				active: false,
+				selected: false,
+				title: "Sales Order Management",
+			},
+		],
 	},
 	{
 		path: "/components/dashboards/dashboard3",
-		type: "link",
+		type: "sub",
 		active: false,
 		selected: false,
 		title: "Invoice",
+		children: [
+			{
+				path: "/components/dashboards/dashboard1",
+				type: "link",
+				active: false,
+				selected: false,
+				title: "Create Invoice",
+			},
+			{
+				path: "/components/dashboards/dashboard1",
+				type: "link",
+				active: false,
+				selected: false,
+				title: "Invoice Management",
+			},
+		],
 	},
 	{
 		path: "/components/dashboards/dashboard3",
-		type: "link",
+		type: "sub",
 		active: false,
 		selected: false,
 		title: "Purchase & Stock Inventory",
+		children: [
+			{
+				path: "/components/dashboards/dashboard1",
+				type: "link",
+				active: false,
+				selected: false,
+				title: "Create Purchase Order",
+			},
+			{
+				path: "/components/dashboards/dashboard1",
+				type: "link",
+				active: false,
+				selected: false,
+				title: "View Stock Balance (WIP)",
+			},
+		],
 	},
 
 	{
