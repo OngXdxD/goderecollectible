@@ -10,52 +10,125 @@ import Seo from "../shared/layout-components/seo/seo";
 
 const baseUrl = 'https://kakihobby.com';
 
-const Home = () => {
-	const [passwordshow1, setpasswordshow1] = useState(false);
-	const [err, setError] = useState("");
-	const [data, setData] = useState({
-		"email": "adminnextjs@gmail.com",
-		"password": "1234567890",
-	});
-	const { email, password } = data;
-	const changeHandler = (e) => {
-		setData({ ...data, [e.target.name]: e.target.value });
-		setError("");
-	};
-	const navigate = useRouter();
-	const routeChange = () => {
-		const path = "/components/dashboards/dashboard1/";
-		navigate.push(path);
-	};
+// const Home = () => {
+// 	const [passwordshow1, setpasswordshow1] = useState(false);
+// 	const [err, setError] = useState("");
+// 	const [data, setData] = useState({
+// 		"email": "adminnextjs@gmail.com",
+// 		"password": "1234567890",
+// 	});
+// 	const { email, password } = data;
+// 	const changeHandler = (e) => {
+// 		setData({ ...data, [e.target.name]: e.target.value });
+// 		setError("");
+// 	};
+// 	const navigate = useRouter();
+// 	const routeChange = () => {
+// 		const path = "/components/dashboards/dashboard1/";
+// 		navigate.push(path);
+// 	};
 
-	const Login = async (e) => {
-		e.preventDefault();
+// 	const Login = async (e) => {
+// 		e.preventDefault();
 	
-		try {
-			// Make API request for login
-			const response = await fetch(`${baseUrl}/api/bizadmin/login`, {
+// 		try {
+// 			// Make API request for login
+// 			const response = await fetch(`${baseUrl}/api/bizadmin/login`, {
+//                 method: 'POST',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                 },
+//                 email: email,
+// 				password: password
+//             });
+	
+// 			// Check the API response, handle success
+// 			if (response.data && response.data.status === 'success') {
+// 				console.log('Login successful', response.data);
+// 				routeChange();  // Redirect to dashboard
+// 			} else {
+// 				setError('Invalid credentials or something went wrong.');
+// 			}
+// 		} catch (err) {
+// 			// Handle errors from API call
+// 			console.error('Error during login:', err);
+// 			setError('Failed to login. Please try again.');
+// 		}
+// 	};
+	
+// 	useEffect(() => {
+// 		if (document.body) {
+// 			document.querySelector("body").classList.add("ltr", "error-page1", "bg-primary");
+// 		}
+
+// 		return () => {
+// 			document.body.classList.remove("ltr", "error-page1", "bg-primary");
+// 		};
+// 	}, []);
+
+export default function AdminLogin() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+
+    const baseUrl = 'https://kakihobby.com';
+
+    useEffect(() => {
+        const rememberedUsername = localStorage.getItem('rememberedUsername');
+        if (rememberedUsername) {
+            setEmail(rememberedUsername);
+            setRememberMe(true);
+        }
+    }, []);
+
+    const handleLogin = async (event) => {
+        event.preventDefault();
+
+        if (!email || !password) {
+            setErrorMessage('Both email and password are required.');
+            return;
+        }
+
+        const adminDto = {
+            Username: email,
+            Password: btoa(password),
+        };
+
+        try {
+            const response = await fetch(`${baseUrl}/api/bizadmin/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                email: email,
-				password: password
+                body: JSON.stringify(adminDto),
             });
-	
-			// Check the API response, handle success
-			if (response.data && response.data.status === 'success') {
-				console.log('Login successful', response.data);
-				routeChange();  // Redirect to dashboard
-			} else {
-				setError('Invalid credentials or something went wrong.');
-			}
-		} catch (err) {
-			// Handle errors from API call
-			console.error('Error during login:', err);
-			setError('Failed to login. Please try again.');
-		}
-	};
-	
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                setErrorMessage(errorData.message);
+                return;
+            }
+
+            const data = await response.json();
+
+            // Store admin data in localStorage
+            const currentTime = new Date().getTime();
+            localStorage.setItem('adminId', data.id);
+            localStorage.setItem('sessionTime', currentTime);
+
+            // Redirect to the admin dashboard
+            window.location.href = '/admin-dashboard';
+        } catch (error) {
+            setErrorMessage('An error occurred during login.');
+        }
+
+        if (rememberMe) {
+            localStorage.setItem('rememberedUsername', email);
+        } else {
+            localStorage.removeItem('rememberedUsername');
+        }
+    };
 	useEffect(() => {
 		if (document.body) {
 			document.querySelector("body").classList.add("ltr", "error-page1", "bg-primary");
@@ -105,8 +178,8 @@ const Home = () => {
 									<Tab.Pane eventKey='nextjs' className='border-0'>
 
 										<div className="row g-0">
-											{err && <Alert variant="danger">{err}</Alert>}
-											<div className="col-12">
+										{errorMessage && <Alert variant="danger">{errorMessage}</Alert>}
+										<div className="col-12">
 												<div className="main-card-signin d-md-flex">
 													<div className="wd-100p"><div className="d-flex mb-4"><Link href="/components/dashboards/dashboard1"><img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/toggle-logo.png`} className="sign-favicon ht-40" alt="logo" /></Link></div>
 														<div className="">
@@ -119,7 +192,7 @@ const Home = () => {
 																		<form action="#">
 																			<div className="form-group">
 																				<label>Username</label> 
-																				<Form.Control type="email" placeholder="Email" name='email' defaultValue={email} onChange={changeHandler} />
+																				<Form.Control type="email" placeholder="Email" name='email' defaultValue={email} onChange={(e) => setEmail(e.target.value)}/>
 																			</div>
 																			<div className="form-group">
 																				<label htmlFor="signin-password" className=" d-block">Password</label>
@@ -127,16 +200,14 @@ const Home = () => {
 																					<Form.Control className="form-control form-control-lg" id="signin-password"
 																						placeholder="Enter your password"
 																						name="password"
-																						type={(passwordshow1) ? "text" : "password"}
+																						type="password"
 																						value={password}
-																						onChange={changeHandler}
+																						onChange={(e) => setPassword(e.target.value)}
 																						required />
-																					<button className="btn btn-light bg-transparent" type="button"
-																						onClick={() => setpasswordshow1(!passwordshow1)} id="button-addon2">
-																						<i className={`${passwordshow1 ? "ri-eye-line" : "ri-eye-off-line"} align-middle`}></i></button>
+																					
 																				</div>
 																			</div>
-																			<Link href="/components/dashboards/dashboard1" className="btn btn-primary btn-block" onClick={Login}>Sign In</Link>
+																			<Link href="/components/dashboards/dashboard1" className="btn btn-primary btn-block" onClick={handleLogin}>Sign In</Link>
 																			
 																		</form>
 
@@ -154,9 +225,9 @@ const Home = () => {
 									</Tab.Pane>
 									<Tab.Pane eventKey='firebase' className='border-0'>
 
-										<div className="row g-0">
-											{err && <Alert variant="danger">{err}</Alert>}
-											<div className="col-12">
+									<div className="row g-0">
+										{errorMessage && <div className="error-message">{errorMessage}</div>}
+										<div className="col-12">
 												<div className="main-card-signin d-md-flex">
 													<div className="wd-100p"><div className="d-flex mb-4"><Link href="/components/dashboards/dashboard1"><img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/brand-logos/toggle-logo.png`} className="sign-favicon ht-40" alt="logo" /></Link></div>
 														<div className="">
@@ -168,49 +239,31 @@ const Home = () => {
 																	<div className="panel-body tabs-menu-body border-0 p-3">
 																		<form action="#">
 																			<div className="form-group">
-																				<label>Email</label> <Form.Control type="email" placeholder="Email" name='email' defaultValue={email} onChange={changeHandler} />
+																				<label>Username</label> 
+																				<Form.Control type="email" placeholder="Email" name='email' defaultValue={email} onChange={(e) => setEmail(e.target.value)}/>
 																			</div>
 																			<div className="form-group">
-																				<label htmlFor="signin-password" className="form-label text-default d-block">Password
-																					<Link href={"/components/pages/authentication/forgot-password/"} className="float-end text-primary">Forget password ?</Link></label>
+																				<label htmlFor="signin-password" className=" d-block">Password</label>
 																				<div className="input-group">
 																					<Form.Control className="form-control form-control-lg" id="signin-password"
 																						placeholder="Enter your password"
 																						name="password"
-																						type={(passwordshow1) ? "text" : "password"}
+																						type="password"
 																						value={password}
-																						onChange={changeHandler}
+																						onChange={(e) => setPassword(e.target.value)}
 																						required />
-																					<button className="btn btn-light bg-transparent" type="button"
-																						onClick={() => setpasswordshow1(!passwordshow1)} id="button-addon2">
-																						<i className={`${passwordshow1 ? "ri-eye-line" : "ri-eye-off-line"} align-middle`}></i></button>
+																					
 																				</div>
 																			</div>
-																			<Link href="/components/dashboards/dashboard1" className="btn btn-primary btn-block" onClick={Login}>Sign In</Link>
-																			<div className="mt-4 d-flex text-center justify-content-center mb-2">
-																				<Link href="#!" className=" me-3">
-																					<span className="btn-inner--icon"> <i className="ri-facebook-fill social-btn-icons fs-18 tx-prime"></i> </span>
-																				</Link>
-																				<Link href="#!" className=" me-3">
-																					<span className="btn-inner--icon"> <i className="ri-twitter-x-line social-btn-icons fs-18 tx-prime"></i> </span>
-																				</Link>
-																				<Link href="#!" className=" me-3">
-																					<span className="btn-inner--icon"> <i className="ri-linkedin-fill social-btn-icons fs-18 tx-prime"></i> </span>
-																				</Link>
-																				<Link href="#!" className=" me-3">
-																					<span className="btn-inner--icon"> <i className="ri-instagram-fill social-btn-icons fs-18 tx-prime"></i> </span>
-																				</Link>
-																			</div>
+																			<Link href="/components/dashboards/dashboard1" className="btn btn-primary btn-block" onClick={handleLogin}>Sign In</Link>
+																			
 																		</form>
 
 																	</div>
 
 																</div>
 
-																<div className="main-signin-footer text-center mt-3">
-																	<p><Link href="/components/pages/authentication/forgot-password" className="mb-3">Forgot password?</Link></p>
-																	<p>Don't have an account? <Link href="/components/pages/authentication/sign-up">Create an Account</Link></p>
-																</div>
+																
 															</div>
 														</div>
 													</div>
@@ -227,4 +280,3 @@ const Home = () => {
 		</Fragment>
 	);
 };
-export default Home;
