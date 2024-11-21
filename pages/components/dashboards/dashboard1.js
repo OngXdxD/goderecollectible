@@ -44,7 +44,7 @@ const Dashboard = () => {
                         aria-live="assertive"
                         onClose={() => setShowToast(false)}
                         show={showToast}
-                        delay={3000}
+                        delay={5000}
                         autohide
                         aria-atomic="true"
                     >
