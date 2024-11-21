@@ -117,8 +117,6 @@ export default function AdminLogin() {
             localStorage.setItem('adminId', data.id);
             localStorage.setItem('sessionTime', currentTime);
 
-            // Redirect to the admin dashboard
-            window.location.href = '/admin-dashboard';
         } catch (error) {
             setErrorMessage('An error occurred during login.');
         }
