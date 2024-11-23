@@ -356,12 +356,10 @@ const Sidebar = ({ local_varaiable, ThemeChanger }) => {
 	}
 	//
 	function setMenuUsingUrl(currentPath) {
-
 		hasParent = false;
 		hasParentLevel = 1;
 		// Check current url and trigger the setSidemenu method to active the menu.
 		const setSubmenuRecursively = (items) => {
-
 			items?.forEach((item) => {
 				if (item.path == "") { }
 				else if (item.path === currentPath) {
@@ -387,7 +385,6 @@ const Sidebar = ({ local_varaiable, ThemeChanger }) => {
 		// Start observing the target element
 		observer.observe(targetElement, config);
 		let currentPath = location.pathname.endsWith("/") ? location.pathname.slice(0, -1) : location.pathname;
-
 		if (currentPath !== previousUrl) {
 			setMenuUsingUrl(currentPath);
 			setPreviousUrl(currentPath);

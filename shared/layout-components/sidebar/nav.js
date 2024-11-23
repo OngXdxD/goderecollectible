@@ -43,21 +43,23 @@ export const MENUITEMS = [
 		],
 	},
 	{
-		path: "/components/dashboards/dashboard3",
+		menutitle: "POS",
+	},
+	{
 		type: "sub",
 		active: false,
 		selected: false,
 		title: "Sales Order",
 		children: [
 			{
-				path: "/components/dashboards/dashboard1",
+				path: "/components/dashboards/dashboard10",
 				type: "link",
 				active: false,
 				selected: false,
 				title: "Create Sales Order",
 			},
 			{
-				path: "/components/dashboards/dashboard1",
+				path: "/components/dashboards/dashboard10",
 				type: "link",
 				active: false,
 				selected: false,
@@ -66,21 +68,20 @@ export const MENUITEMS = [
 		],
 	},
 	{
-		path: "/components/dashboards/dashboard3",
 		type: "sub",
 		active: false,
 		selected: false,
 		title: "Invoice",
 		children: [
 			{
-				path: "/components/dashboards/dashboard1",
+				path: "/components/dashboards/dashboard10",
 				type: "link",
 				active: false,
 				selected: false,
 				title: "Create Invoice",
 			},
 			{
-				path: "/components/dashboards/dashboard1",
+				path: "/components/dashboards/dashboard10",
 				type: "link",
 				active: false,
 				selected: false,
@@ -89,21 +90,20 @@ export const MENUITEMS = [
 		],
 	},
 	{
-		path: "/components/dashboards/dashboard3",
 		type: "sub",
 		active: false,
 		selected: false,
 		title: "Purchase & Stock Inventory",
 		children: [
 			{
-				path: "/components/dashboards/dashboard1",
+				path: "/components/purchaseorder/createpurchaseorder",
 				type: "link",
 				active: false,
 				selected: false,
 				title: "Create Purchase Order",
 			},
 			{
-				path: "/components/dashboards/dashboard1",
+				path: "/components/dashboards/dashboard10",
 				type: "link",
 				active: false,
 				selected: false,
