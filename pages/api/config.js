@@ -1,1 +1,1 @@
-export const baseUrl = 'https://localhost:44311';
+export const baseUrl = 'https://kakihobby.com';
