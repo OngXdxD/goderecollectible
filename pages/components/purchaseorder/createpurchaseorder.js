@@ -6,20 +6,33 @@ import dynamic from "next/dynamic";
 import Pageheader from "../../../shared/layout-components/pageheader/pageheader";
 import { baseUrl } from '../../api/config'; 
 import useFetchAndCache from '../../../shared/hook/useFetchAndCache';
+import SuccessToast from "../toast/toastMessage";
+import PurchaseOrderProductTable from "../tables/createPurchaseOrderTable";
 
 const CreatePurchaseOrder = () => {
+
+    const getCurrentDate = () => {
+        const today = new Date();
+        return today.toISOString().split('T')[0]; // Format to YYYY-MM-DD
+    };
+
+    const [toastMessage, setToastMessage] = useState("");
+    const [showToast, setShowToast] = useState(false);
     const [purchaseOrderNumber, setPurchaseOrderNumber] = useState("");
     const [businessList, setBusinessList] = useState([]);
     const [selectedBusiness, setSelectedBusiness] = useState("");
     const [supplierList, setSupplierList] = useState(null);
     const [selectedSupplier, setSelectedSupplier] = useState("");
-    const [product, setProduct] = useState(null);
+    const [newSupplier, setNewSupplier] = useState(null);
+    const [productList, setProductList] = useState(null);
     const [currency, setCurrency] = useState("1");
     const [country, setCountry] = useState("1");
-    const [poDate, setPoDate] = useState("");
+    const [poDate, setPoDate] = useState(getCurrentDate());;
     const [preOrder, setPreOrder] = useState(false);
     const [remark, setRemark] = useState("");
-    const [newSupplier, setNewSupplier] = useState("");
+    const [productRows, setProductRows] = useState([]);
+    const [selectedProduct, setSelectedProduct] = useState([]);
+    const [totalAmount, setTotalAmount] = useState(0);
 
     // Modal state
     const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -32,8 +45,60 @@ const CreatePurchaseOrder = () => {
     useEffect(() => {
         fetchBusinessData();
         fetchSupplierData();
-        
+        fetchProductData();
     }, []);
+
+    const triggerSuccessToast = (message) => {
+        setToastMessage(message);
+        setShowToast(true);
+    };
+
+    const validateSupplierInfo = () => {
+        const errors = [];
+        if (!newSupplier.trim()) {
+            errors.push("Supplier Name cannot be empty.");
+        }
+        if (!country) {
+            errors.push("Country must be selected.");
+        }
+    
+        if (errors.length > 0) {
+            alert(errors.join("\n")); // Replace with your `message.display` equivalent
+            return;
+        }
+    
+        registerSupplier(newSupplier, country);
+    };
+
+    const registerSupplier = async (supplierName, countryId) => {
+        const supplierDto = {
+            Name: supplierName,
+            Country: countryId,
+        };
+    
+        try {
+            const response = await fetch(`${baseUrl}/api/supplier/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(supplierDto),
+            });
+    
+            if (!response.ok) {
+                const errorResponse = await response.json();
+                throw new Error(errorResponse.message || "Failed to register supplier.");
+            }
+    
+            triggerSuccessToast("Supplier register successful!");
+            setShowSupplierModal(false); // Close modal after successful registration
+            fetchSupplierData(); // Refresh supplier dropdown data
+            setNewSupplier(""); // Clear input fields
+            setCountry(""); // Reset country selection
+        } catch (error) {
+            alert(error.message);
+        }
+    };
 
     const fetchBusinessData = async () => {
         try {
@@ -71,11 +136,94 @@ const CreatePurchaseOrder = () => {
         setSelectedSupplier(selectedOption); // Update the selected business state
     };
 
+    const fetchProductData = async () => {
+        try {
+            const response = await fetch(`${baseUrl}/api/customerproduct/selectall`);
+            const data = await response.json();
+            const products = data.map(product => ({
+                value: product.Id,
+                label: product.Name
+            }));
+            setProductList(products);
+        } catch (error) {
+            console.error("Error fetching product data:", error);
+        }
+    };
+
+    const fetchProductDetails = async (productId) => {
+        try {
+            const response = await fetch(`${baseUrl}/api/customerproduct/details/${productId}`);
+            const productDetails = await response.json();
+
+            // Prevent duplicates by checking if productId already exists
+            const isDuplicate = productRows.some((row) => row.id === productId);
+            if (isDuplicate) {
+                return;
+            }
+
+            const newRow = {
+                id: productId,
+                name: productDetails.Name,
+                quantity: 1, // Default quantity
+                cost: 0, // Default cost
+                totalPrice: 0,
+            };
+
+            setProductRows((prevRows) => [...prevRows, newRow]);
+        } catch (error) {
+            console.error("Error fetching product details:", error);
+        }
+    };
+
+    const handleProductSelect = (selectedOptions) => {
+        // Add new products to the table
+        const selectedIds = selectedOptions.map((option) => option.value);
+    
+        // Add newly selected products
+        selectedOptions.forEach((option) => {
+            if (!productRows.find((row) => row.id === option.value)) {
+                fetchProductDetails(option.value);
+            }
+        });
+    
+        // Remove products that are no longer in the dropdown
+        const updatedRows = productRows.filter((row) => selectedIds.includes(row.id));
+        setProductRows(updatedRows);
+    
+        // Update totals after modifying productRows
+        const updatedTotal = updatedRows.reduce((acc, row) => acc + row.totalPrice, 0);
+        setTotalAmount(updatedTotal);
+    
+        // Update the selected products
+        setSelectedProduct(selectedOptions);
+    };
+    
+    const updateTotals = () => {
+        const total = productRows.reduce((acc, row) => acc + row.totalPrice, 0);
+        setTotalAmount(total);
+    };
+
+    const updateRowQuantity = (index, quantity) => {
+        const updatedRows = [...productRows];
+        updatedRows[index].quantity = parseFloat(quantity) || 0;
+        updatedRows[index].totalPrice = updatedRows[index].quantity * updatedRows[index].cost;
+        setProductRows(updatedRows);
+        updateTotals();
+    };
+
+    const updateRowCost = (index, cost) => {
+        const updatedRows = [...productRows];
+        updatedRows[index].cost = parseFloat(cost) || 0;
+        updatedRows[index].totalPrice = updatedRows[index].quantity * updatedRows[index].cost;
+        setProductRows(updatedRows);
+        updateTotals();
+    };
+
     const { data: dropdownData, loading, error } = useFetchAndCache(
         ["Currency", "Country"],
         `${baseUrl}/api/masterdata`
     );
-    console.log(dropdownData)
+    
     if (loading) return <div>Loading...</div>;
     if (error) return <div>Error loading data</div>;
 
@@ -83,72 +231,39 @@ const CreatePurchaseOrder = () => {
         value: item.Id,
         label: item.Name,
     }));
-    
-      const countryOptions = dropdownData?.Country?.map(item => ({
+
+    const countryOptions = dropdownData?.Country?.map(item => ({
         value: item.Id,
         label: item.Name,
     }));
-
     
-
-    const fetchProductData = async () => {
+    // Function to fetch a generated PO number from the server
+    const generatePO = async () => {
         try {
-        const response = await fetch(`${baseUrl}/api/product/selectall`);
-        const data = await response.json();
-        setProduct(data);
+            const response = await fetch(`${baseUrl}/api/purchaseorder/getPONumber`, {
+                method: 'GET',
+            });
+            if (!response.ok) {
+                throw new Error("Failed to fetch PO number");
+            }
+            const poNumber = await response.text();
+            setPurchaseOrderNumber(poNumber.replace(/"/g, "")); // Update state with the generated PO number
         } catch (error) {
-        console.error("Error fetching product data:", error);
+            console.error("Error fetching invoice number:", error);
         }
     };
 
-    const handleCreatePurchaseOrder = () => {
-        const purchaseOrderData = {
-        purchaseOrderNumber,
-        business,
-        supplier,
-        product,
-        currency,
-        poDate,
-        preOrder,
-        remark
-        };
-
-        submitPurchaseOrder(purchaseOrderData);
+    const handlePurchaseOrderInput = (event) => {
+        setPurchaseOrderNumber(event.target.value); // Update state with the input value
     };
-
-    const submitPurchaseOrder = (purchaseOrderData) => {
-        const requestData = {
-        PurchaseOrder: purchaseOrderData.purchaseOrderNumber,
-        AdminId: localStorage.getItem('adminId'),
-        Supplier: purchaseOrderData.supplier,
-        BusinessID: purchaseOrderData.business,
-        Currency: purchaseOrderData.currency,
-        OrderDate: purchaseOrderData.poDate,
-        PreOrder: purchaseOrderData.preOrder,
-        Remark: purchaseOrderData.remark,
-        Items: purchaseOrderData.product
-        };
-
-        // Submit data to the backend
-        fetch(`${baseUrl}/api/purchaseorder/register`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestData)
-        })
-        .then(response => response.json())
-        .then(data => {
-        alert("Purchase Order created successfully.");
-        })
-        .catch(error => {
-        console.error("Error creating purchase order:", error);
-        alert("Failed to create purchase order.");
-        });
-    };
-
+    
 	return (
 		<div>
+            <SuccessToast
+                message={toastMessage}
+                show={showToast}
+                onClose={() => setShowToast(false)}
+            />
 			<Seo title={"Purchase Order"} />
 			<Pageheader title="PURCHASE ORDER" heading="Purchase & Stock Inventory" active="Create Purchase Order" />
 
@@ -162,12 +277,17 @@ const CreatePurchaseOrder = () => {
 								<FormGroup>
 									<Form.Label className="form-label">Purchase Order Number</Form.Label>
                                     <InputGroup className="mb-3">
-                                        <Form.Control type="text" className="" placeholder="PO Number"
-                                            aria-label="PO Number" aria-describedby="button-auto-generate-po-number"
+                                        <Form.Control
+                                            type="text"
+                                            placeholder="PO Number"
                                             value={purchaseOrderNumber}
-                                            onChange={(e) => setPurchaseOrderNumber(e.target.value)}/>
-                                            <Button variant='primary' className="" type="button"
-                                            id="button-auto-generate-po-number">Auto Generate</Button>
+                                            onChange={handlePurchaseOrderInput} // Handle manual input
+                                        />
+                                        <Button 
+                                            variant='primary' 
+                                            type="button"
+                                            onClick={generatePO}>Auto Generate
+                                        </Button>
                                         </InputGroup>
                                 </FormGroup>
                                 <FormGroup className="form-group mt-2">
@@ -190,6 +310,9 @@ const CreatePurchaseOrder = () => {
                                             value={selectedSupplier}
                                             classNamePrefix="Select2" 
                                             placeholder="Select Supplier"
+                                            isClearable={true}
+                                            isLoading={loading}
+                                            noOptionsMessage={() => "No options available"} 
                                         />
                                         <Button variant='' className="btn btn-primary" type="button" onClick={handleShowSupplierModal}>Create Supplier</Button>
                                     </InputGroup>
@@ -198,12 +321,18 @@ const CreatePurchaseOrder = () => {
                                     <Form.Label className="form-label">Product</Form.Label>
                                     <InputGroup>
                                         <Select  
-                                            name="colors" 
+                                            isMulti
+                                            name="product" 
                                             className="basic-multi-select flex-grow-1"
-                                            menuPlacement='auto' 
-                                            onChange={setProduct}
-                                            value={product}
-                                            classNamePrefix="Select2" />
+                                            options={productList}
+                                            onChange={handleProductSelect}
+                                            value={selectedProduct}
+                                            classNamePrefix="Select2" 
+                                            placeholder="Select Product"
+                                            isClearable={true}
+                                            isLoading={loading}
+                                            noOptionsMessage={() => "No options available"} 
+                                        />
                                         <Button variant='' className="btn btn-primary" type="button">Create Product</Button>
                                     </InputGroup>
                                 </FormGroup>
@@ -253,25 +382,33 @@ const CreatePurchaseOrder = () => {
                 <Col xl={6} lg={4} md={12}>
                 <Card>
                     <Card.Header>
-                    <h3 className="card-title">Invoice Preview</h3>
+                    <h3 className="card-title">Purchase Order Preview</h3>
                     </Card.Header>
                     <Card.Body>
                     <div className="invoice-preview">
                         <h4>Purchase Order <span>{purchaseOrderNumber}</span></h4>
 
                         <div>
-                        <h5>Business</h5>
-                        <p>{selectedBusiness.label}</p>
+                            <h3>{selectedBusiness.label}</h3>
                         </div>
 
                         <div>
-                        <h5>Supplier</h5>
-                        <p></p>
+                            <h5>{poDate}</h5>
+                        </div>
+                        <h4>Purchase From</h4>
+                        <div>
+                            <h5>{selectedSupplier?.label || "No supplier selected"}</h5>
                         </div>
 
+                        
+
                         <div>
-                        <h5>Product</h5>
-                        <p>{product}</p>
+                        <PurchaseOrderProductTable
+                            productRows={productRows}
+                            updateRowQuantity={updateRowQuantity}
+                            updateRowCost={updateRowCost}
+                            totalAmount={totalAmount}
+                        />
                         </div>
 
                         <div>
@@ -279,10 +416,7 @@ const CreatePurchaseOrder = () => {
                         <p>{currency}</p>
                         </div>
 
-                        <div>
-                        <h5>Date</h5>
-                        <p>{poDate}</p>
-                        </div>
+                        
 
                         <div>
                         <h5>Pre-Order</h5>
@@ -305,7 +439,7 @@ const CreatePurchaseOrder = () => {
             {/* Modals for Supplier and Product */}
       <Modal show={showSupplierModal} onHide={handleCloseSupplierModal}>
         <Modal.Header closeButton>
-          <Modal.Title>Create Supplier</Modal.Title>
+            <Modal.Title>Create Supplier</Modal.Title>
         </Modal.Header>
         <Modal.Body>
             <FormGroup>
@@ -328,7 +462,7 @@ const CreatePurchaseOrder = () => {
             </FormGroup>
         </Modal.Body>
         <Modal.Footer>
-            <Button variant="primary">Save Supplier</Button>
+            <Button variant="primary" onClick={validateSupplierInfo}>Save Supplier</Button>
             <Button variant="secondary" onClick={handleCloseSupplierModal}>Close</Button>
         </Modal.Footer>
       </Modal>
