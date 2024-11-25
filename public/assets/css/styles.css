@@ -18379,11 +18379,11 @@ fieldset:disabled .btn {
   transition: all 0.2s ease;
 }
 .toggle span::before {
-  content: "on";
+  content: "yes";
   inset-inline-start: -1.563rem;
 }
 .toggle span::after {
-  content: "off";
+  content: "no";
   inset-inline-end: -1.813rem;
   color: var(--text-muted);
 }

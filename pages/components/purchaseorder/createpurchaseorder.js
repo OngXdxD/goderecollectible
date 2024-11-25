@@ -6,8 +6,9 @@ import dynamic from "next/dynamic";
 import Pageheader from "../../../shared/layout-components/pageheader/pageheader";
 import { baseUrl } from '../../api/config'; 
 import useFetchAndCache from '../../../shared/hook/useFetchAndCache';
-import SuccessToast from "../toast/toastMessage";
 import PurchaseOrderProductTable from "../tables/createPurchaseOrderTable";
+import CreateProductModal from "../modals/createProductModal";
+import CreateSupplierModal from "../modals/createSupplierModal";
 
 const CreatePurchaseOrder = () => {
 
@@ -16,8 +17,6 @@ const CreatePurchaseOrder = () => {
         return today.toISOString().split('T')[0]; // Format to YYYY-MM-DD
     };
 
-    const [toastMessage, setToastMessage] = useState("");
-    const [showToast, setShowToast] = useState(false);
     const [purchaseOrderNumber, setPurchaseOrderNumber] = useState("");
     const [businessList, setBusinessList] = useState([]);
     const [selectedBusiness, setSelectedBusiness] = useState("");
@@ -25,14 +24,19 @@ const CreatePurchaseOrder = () => {
     const [selectedSupplier, setSelectedSupplier] = useState("");
     const [newSupplier, setNewSupplier] = useState(null);
     const [productList, setProductList] = useState(null);
-    const [currency, setCurrency] = useState("1");
-    const [country, setCountry] = useState("1");
+    const [newProduct, setNewProduct] = useState(null);
+    const [currency, setCurrency] = useState("");
+    const [country, setCountry] = useState("");
+    const [series, setSeries] = useState("");
+    const [category, setCategory] = useState("");
+    const [brand, setBrand] = useState("");
     const [poDate, setPoDate] = useState(getCurrentDate());;
-    const [preOrder, setPreOrder] = useState(false);
     const [remark, setRemark] = useState("");
     const [productRows, setProductRows] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState([]);
+    const [price, setPrice] = useState(0);
     const [totalAmount, setTotalAmount] = useState(0);
+    const [preOrder, setPreOrder] = useState("on");
 
     // Modal state
     const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -47,58 +51,6 @@ const CreatePurchaseOrder = () => {
         fetchSupplierData();
         fetchProductData();
     }, []);
-
-    const triggerSuccessToast = (message) => {
-        setToastMessage(message);
-        setShowToast(true);
-    };
-
-    const validateSupplierInfo = () => {
-        const errors = [];
-        if (!newSupplier.trim()) {
-            errors.push("Supplier Name cannot be empty.");
-        }
-        if (!country) {
-            errors.push("Country must be selected.");
-        }
-    
-        if (errors.length > 0) {
-            alert(errors.join("\n")); // Replace with your `message.display` equivalent
-            return;
-        }
-    
-        registerSupplier(newSupplier, country);
-    };
-
-    const registerSupplier = async (supplierName, countryId) => {
-        const supplierDto = {
-            Name: supplierName,
-            Country: countryId,
-        };
-    
-        try {
-            const response = await fetch(`${baseUrl}/api/supplier/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(supplierDto),
-            });
-    
-            if (!response.ok) {
-                const errorResponse = await response.json();
-                throw new Error(errorResponse.message || "Failed to register supplier.");
-            }
-    
-            triggerSuccessToast("Supplier register successful!");
-            setShowSupplierModal(false); // Close modal after successful registration
-            fetchSupplierData(); // Refresh supplier dropdown data
-            setNewSupplier(""); // Clear input fields
-            setCountry(""); // Reset country selection
-        } catch (error) {
-            alert(error.message);
-        }
-    };
 
     const fetchBusinessData = async () => {
         try {
@@ -134,6 +86,11 @@ const CreatePurchaseOrder = () => {
 
     const handleSupplierSelect = (selectedOption) => {
         setSelectedSupplier(selectedOption); // Update the selected business state
+    };
+
+    const handleCurrencySelect = (selectedOption) => {
+        console.log(selectedOption)
+        setCurrency(selectedOption); 
     };
 
     const fetchProductData = async () => {
@@ -220,7 +177,7 @@ const CreatePurchaseOrder = () => {
     };
 
     const { data: dropdownData, loading, error } = useFetchAndCache(
-        ["Currency", "Country"],
+        ["Currency", "Country", "Series", "Category", "Brand"],
         `${baseUrl}/api/masterdata`
     );
     
@@ -233,6 +190,21 @@ const CreatePurchaseOrder = () => {
     }));
 
     const countryOptions = dropdownData?.Country?.map(item => ({
+        value: item.Id,
+        label: item.Name,
+    }));
+
+    const seriesOptions = dropdownData?.Series?.map(item => ({
+        value: item.Id,
+        label: item.Name,
+    }));
+
+    const categoryOptions = dropdownData?.Category?.map(item => ({
+        value: item.Id,
+        label: item.Name,
+    }));
+
+    const brandOptions = dropdownData?.Brand?.map(item => ({
         value: item.Id,
         label: item.Name,
     }));
@@ -259,11 +231,6 @@ const CreatePurchaseOrder = () => {
     
 	return (
 		<div>
-            <SuccessToast
-                message={toastMessage}
-                show={showToast}
-                onClose={() => setShowToast(false)}
-            />
 			<Seo title={"Purchase Order"} />
 			<Pageheader title="PURCHASE ORDER" heading="Purchase & Stock Inventory" active="Create Purchase Order" />
 
@@ -314,7 +281,7 @@ const CreatePurchaseOrder = () => {
                                             isLoading={loading}
                                             noOptionsMessage={() => "No options available"} 
                                         />
-                                        <Button variant='' className="btn btn-primary" type="button" onClick={handleShowSupplierModal}>Create Supplier</Button>
+                                        <Button className="btn btn-primary" type="button" onClick={handleShowSupplierModal}>Create Supplier</Button>
                                     </InputGroup>
                                 </FormGroup>
                                 <FormGroup className="form-group mt-2">
@@ -333,15 +300,15 @@ const CreatePurchaseOrder = () => {
                                             isLoading={loading}
                                             noOptionsMessage={() => "No options available"} 
                                         />
-                                        <Button variant='' className="btn btn-primary" type="button">Create Product</Button>
+                                        <Button className="btn btn-primary" type="button" onClick={handleShowProductModal}>Create Product</Button>
                                     </InputGroup>
                                 </FormGroup>
                                 <FormGroup className="form-group mt-2">
                                     <Form.Label className="form-label">Purchase Currency</Form.Label>
                                     <Select
                                         options={currencyOptions}
-                                        value={currencyOptions?.find(option => option.value === currency)}
-                                        onChange={(option) => setCurrency(option.value)}
+                                        value={currency.label}
+                                        onChange={handleCurrencySelect}
                                         placeholder="Select Currency"
                                     />
                                 </FormGroup>
@@ -356,10 +323,9 @@ const CreatePurchaseOrder = () => {
                                 </FormGroup>
                                 <FormGroup className="form-group mt-2">
                                     <Form.Label className="form-label">Pre-Order</Form.Label>
-                                    <Select classNamePrefix="Select2"
-                                        
-                                        placeholder='Select'
-                                    />
+                                    <div className={`toggle  ${preOrder}`} onClick={() => { preOrder == "on" ? setPreOrder("off") : setPreOrder("on"); }}>
+                                        <span></span>
+                                    </div>
                                 </FormGroup>
                                 <FormGroup className="form-group mt-2">
                                     <Form.Label className="form-label">Remark</Form.Label>
@@ -391,41 +357,28 @@ const CreatePurchaseOrder = () => {
                         <div>
                             <h3>{selectedBusiness.label}</h3>
                         </div>
-
                         <div>
                             <h5>{poDate}</h5>
                         </div>
+                        <br />
                         <h4>Purchase From</h4>
                         <div>
                             <h5>{selectedSupplier?.label || "No supplier selected"}</h5>
                         </div>
-
-                        
-
+                        <br />
                         <div>
-                        <PurchaseOrderProductTable
-                            productRows={productRows}
-                            updateRowQuantity={updateRowQuantity}
-                            updateRowCost={updateRowCost}
-                            totalAmount={totalAmount}
-                        />
+                            <PurchaseOrderProductTable
+                                productRows={productRows}
+                                updateRowQuantity={updateRowQuantity}
+                                updateRowCost={updateRowCost}
+                                totalAmount={totalAmount}
+                                currency={currency.label}
+                            />
                         </div>
-
+                        <br />
                         <div>
-                        <h5>Purchase Currency</h5>
-                        <p>{currency}</p>
-                        </div>
-
-                        
-
-                        <div>
-                        <h5>Pre-Order</h5>
-                        <p>{preOrder ? "Yes" : "No"}</p>
-                        </div>
-
-                        <div>
-                        <h5>Remark</h5>
-                        <p>{remark}</p>
+                            <h5>Remark</h5>
+                            <p>{remark}</p>
                         </div>
                     </div>
                     </Card.Body>
@@ -434,51 +387,24 @@ const CreatePurchaseOrder = () => {
 
             </Row>
 
-			{/* <!-- row closed --> */}
-
             {/* Modals for Supplier and Product */}
-      <Modal show={showSupplierModal} onHide={handleCloseSupplierModal}>
-        <Modal.Header closeButton>
-            <Modal.Title>Create Supplier</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-            <FormGroup>
-                <Form.Label className="form-label">Supplier Name</Form.Label>
-                <InputGroup className="mb-3">
-                    <Form.Control type="text" className="" placeholder="Supplier name"
-                        aria-label="Supplier Name"
-                        value={newSupplier}
-                        onChange={(e) => setNewSupplier(e.target.value)}/>
-                    </InputGroup>
-            </FormGroup>
-            <FormGroup className="form-group mt-2">
-                <Form.Label className="form-label">Country</Form.Label>
-                <Select
-                    options={countryOptions}
-                    value={countryOptions?.find(option => option.value === country)}
-                    onChange={(option) => setCountry(option.value)}
-                    placeholder="Select Country"
-                />
-            </FormGroup>
-        </Modal.Body>
-        <Modal.Footer>
-            <Button variant="primary" onClick={validateSupplierInfo}>Save Supplier</Button>
-            <Button variant="secondary" onClick={handleCloseSupplierModal}>Close</Button>
-        </Modal.Footer>
-      </Modal>
+            <CreateSupplierModal
+                show={showSupplierModal}
+                onClose={handleCloseSupplierModal}
+                countryOptions={countryOptions}
+                baseUrl={baseUrl}
+                populateSupplier={fetchSupplierData}
+            />
 
-      <Modal show={showProductModal} onHide={handleCloseProductModal}>
-        <Modal.Header closeButton>
-          <Modal.Title>Create Product</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {/* Product form goes here */}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseProductModal}>Close</Button>
-          <Button variant="primary">Save Product</Button>
-        </Modal.Footer>
-      </Modal>
+            <CreateProductModal
+                show={showProductModal}
+                onClose={handleCloseProductModal}
+                seriesOptions={seriesOptions}
+                categoryOptions={categoryOptions}
+                brandOptions={brandOptions}
+                baseUrl={baseUrl}
+                populateProduct={fetchProductData}
+            />
 		</div>
 	);
 };

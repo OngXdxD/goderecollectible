@@ -1,16 +1,16 @@
 import React from "react";
 import { Table, InputGroup, Form } from "react-bootstrap";
 
-const PurchaseOrderProductTable = ({ productRows, updateRowQuantity, updateRowCost, totalAmount }) => {
+const PurchaseOrderProductTable = ({ productRows, updateRowQuantity, updateRowCost, totalAmount, currency }) => {
     return (
         <div>
-            <Table striped bordered hover>
+            <Table striped bordered hover className="fixed-width-table">
                 <thead>
                     <tr>
-                        <th>Product Name</th>
-                        <th>Quantity</th>
-                        <th>Cost</th>
-                        <th>Total</th>
+                        <th className="col-name">Product Name</th>
+                        <th className="col-quantity">Quantity</th>
+                        <th className="col-cost">Cost</th>
+                        <th className="col-total">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -21,7 +21,13 @@ const PurchaseOrderProductTable = ({ productRows, updateRowQuantity, updateRowCo
                                 <Form.Control
                                     type="number"
                                     value={row.quantity}
-                                    onChange={(e) => updateRowQuantity(index, e.target.value)}
+                                    onChange={(e) => {
+                                        let value = e.target.value;
+                                        if (!isNaN(value)) {
+                                            value = value.replace(/^0+/, ''); // Remove leading zeros
+                                            updateRowQuantity(index, value === '' ? 0 : parseFloat(value)); // Update row cost
+                                        }
+                                    }}
                                     min="1"
                                 />
                             </td>
@@ -29,7 +35,13 @@ const PurchaseOrderProductTable = ({ productRows, updateRowQuantity, updateRowCo
                                 <Form.Control
                                     type="number"
                                     value={row.cost}
-                                    onChange={(e) => updateRowCost(index, e.target.value)}
+                                    onChange={(e) => {
+                                        let value = e.target.value;
+                                        if (!isNaN(value)) {
+                                            value = value.replace(/^0+/, ''); // Remove leading zeros
+                                            updateRowCost(index, value === '' ? 0 : parseFloat(value)); // Update row cost
+                                        }
+                                    }}
                                     min="0"
                                 />
                             </td>
@@ -40,7 +52,7 @@ const PurchaseOrderProductTable = ({ productRows, updateRowQuantity, updateRowCo
 				<tfoot>
 					<tr>
 						<td colSpan="3" className="text-end"><strong>Total Amount:</strong></td>
-						<td>{totalAmount.toFixed(2)}</td>
+						<td>{currency} {Intl.NumberFormat("en-US").format(totalAmount)}</td>
 					</tr>
 				</tfoot>
             </Table>
