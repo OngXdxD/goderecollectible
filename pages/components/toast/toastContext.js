@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useCallback } from "react";
-import SuccessToast from "./toastMessage";
+import ToastMessage from "./toastMessage";
 
 const ToastContext = createContext(); // Create the context
 
@@ -12,9 +12,11 @@ export default useToast;
 export const ToastProvider = ({ children }) => {
     const [toastMessage, setToastMessage] = useState("");
     const [showToast, setShowToast] = useState(false);
+    const [toastType, setToastType] = useState(false);
 
-    const triggerSuccessToast = (message) => {
+    const triggerToast = (message, type = "success") => {
         setToastMessage(message);
+        setToastType(type);
         setShowToast(true);
     };
 
@@ -23,12 +25,13 @@ export const ToastProvider = ({ children }) => {
     };
 
     return (
-        <ToastContext.Provider value={{ triggerSuccessToast }}>
+        <ToastContext.Provider value={{ triggerToast }}>
             {children}
-            <SuccessToast
+            <ToastMessage
                 message={toastMessage}
                 show={showToast}
                 onClose={handleCloseToast}
+                type={toastType} // Pass the type here
             />
         </ToastContext.Provider>
     );

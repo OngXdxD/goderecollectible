@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button, Modal, FormGroup, InputGroup, Form } from "react-bootstrap";
-import Select from "react-select";
+import CreatableSelect from "react-select/creatable";
 import useToast from "../toast/toastContext";
 
 const CreateSuppplierModal = ({
@@ -11,7 +11,7 @@ const CreateSuppplierModal = ({
     baseUrl,
     populateSupplier
 }) => {
-    const { triggerSuccessToast } = useToast();
+    const { triggerToast } = useToast();
     const [newSupplier, setNewSupplier] = useState("");
     const [country, setCountry] = useState("");
 
@@ -25,7 +25,7 @@ const CreateSuppplierModal = ({
         }
     
         if (errors.length > 0) {
-            alert(errors.join("\n")); // Replace with your `message.display` equivalent
+            triggerToast(errors.join("<br />"), "danger"); // Replace with your `message.display` equivalent
             return;
         }
     
@@ -52,19 +52,27 @@ const CreateSuppplierModal = ({
                 throw new Error(errorResponse.message || "Failed to register supplier.");
             }
     
-            triggerSuccessToast("Supplier register successful!");
+            triggerToast("Supplier register successful!");
             onClose(); // Close modal after successful registration
             populateSupplier(); // Refresh supplier dropdown data
             setNewSupplier(""); // Clear input fields
             setCountry(""); // Reset country selection
         } catch (error) {
-            alert(error.message);
+            triggerToast(error.message, "danger");
         }
     };
 
     return (
 
-        <Modal show={show} onHide={onClose}>
+        <Modal 
+            show={show}
+            onHide={onClose}
+            onExited={() => {
+                // Clear fields when modal is completely closed
+                setNewSupplier("");
+                setCountry("");
+            }}
+        >
             <Modal.Header closeButton>
                 <Modal.Title>Create Supplier</Modal.Title>
             </Modal.Header>
@@ -80,7 +88,7 @@ const CreateSuppplierModal = ({
                 </FormGroup>
                 <FormGroup className="form-group mt-2">
                     <Form.Label className="form-label">Country</Form.Label>
-                    <Select
+                    <CreatableSelect
                         options={countryOptions}
                         value={countryOptions?.find(option => option.value === country)}
                         onChange={(option) => setCountry(option.value)}

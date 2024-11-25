@@ -1,11 +1,17 @@
 import React from "react";
 import { Toast, ToastContainer } from "react-bootstrap";
 
-const SuccessToast = ({ message, show, onClose }) => {
+const ToastMessage = ({ message, show, onClose, type = "success" }) => {
+    // Define classes for different types
+    const toastClass = {
+        success: "bg-success-transparent",
+        danger: "bg-danger-transparent",
+    };
+
     return (
-        <ToastContainer   className="toast-container position-fixed top-0 end-0 p-3">
+        <ToastContainer className="toast-container position-fixed top-0 end-0 p-3">
             <Toast
-                className="toast colored-toast bg-success-transparent"
+                className={`toast colored-toast ${toastClass[type] || "bg-success-transparent"}`}
                 role="alert"
                 aria-live="assertive"
                 onClose={onClose}
@@ -14,11 +20,10 @@ const SuccessToast = ({ message, show, onClose }) => {
                 autohide
                 aria-atomic="true"
             >
-                <Toast.Body>{message}</Toast.Body>
+                <Toast.Body dangerouslySetInnerHTML={{ __html: message }} />
             </Toast>
         </ToastContainer>
-        
     );
 };
 
-export default SuccessToast;
+export default ToastMessage;

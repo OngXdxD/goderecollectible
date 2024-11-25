@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button, Card, Col, Form, FormGroup, Pagination, Row, OverlayTrigger, Tooltip, InputGroup, Modal } from "react-bootstrap";
 import Seo from "../../../shared/layout-components/seo/seo";
 const Select = dynamic(() => import("react-select"), {ssr : false});
+import { Toast, ToastContainer } from "react-bootstrap";
 import dynamic from "next/dynamic";
 import Pageheader from "../../../shared/layout-components/pageheader/pageheader";
 import { baseUrl } from '../../api/config'; 
@@ -9,6 +10,7 @@ import useFetchAndCache from '../../../shared/hook/useFetchAndCache';
 import PurchaseOrderProductTable from "../tables/createPurchaseOrderTable";
 import CreateProductModal from "../modals/createProductModal";
 import CreateSupplierModal from "../modals/createSupplierModal";
+import CreatePaymentModal from "../modals/createPaymentModal";
 
 const CreatePurchaseOrder = () => {
 
@@ -41,10 +43,19 @@ const CreatePurchaseOrder = () => {
     // Modal state
     const [showSupplierModal, setShowSupplierModal] = useState(false);
     const [showProductModal, setShowProductModal] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showPaymentConfirmationModal, setShowPaymentConfirmationModal] = useState(false);
     const handleShowSupplierModal = () => setShowSupplierModal(true);
     const handleCloseSupplierModal = () => setShowSupplierModal(false);
     const handleShowProductModal = () => setShowProductModal(true);
     const handleCloseProductModal = () => setShowProductModal(false);
+    const handleShowPaymentModal = () => {
+        setShowPaymentModal(true);
+        setShowPaymentConfirmationModal(false);
+    }
+    const handleClosePaymentModal = () => setShowPaymentModal(false);
+    const handleShowPaymentConfirmationModal = () => setShowPaymentConfirmationModal(true);
+    const handleClosePaymentConfirmationModal = () => setShowPaymentConfirmationModal(false);
 
     useEffect(() => {
         fetchBusinessData();
@@ -62,7 +73,7 @@ const CreatePurchaseOrder = () => {
             }));
             setBusinessList(businesses);
         } catch (error) {
-            console.error("Error fetching business data:", error);
+            triggerToast("Error fetching business data: " + error, "danger");
         }
     };
 
@@ -80,7 +91,7 @@ const CreatePurchaseOrder = () => {
             }));
             setSupplierList(suppliers);
         } catch (error) {
-            console.error("Error fetching supplier data:", error);
+            triggerToast("Error fetching supplier data: " + error, "danger");
         }
     };
 
@@ -89,7 +100,6 @@ const CreatePurchaseOrder = () => {
     };
 
     const handleCurrencySelect = (selectedOption) => {
-        console.log(selectedOption)
         setCurrency(selectedOption); 
     };
 
@@ -103,7 +113,7 @@ const CreatePurchaseOrder = () => {
             }));
             setProductList(products);
         } catch (error) {
-            console.error("Error fetching product data:", error);
+            triggerToast("Error fetching product data: " + error, "danger");
         }
     };
 
@@ -128,7 +138,7 @@ const CreatePurchaseOrder = () => {
 
             setProductRows((prevRows) => [...prevRows, newRow]);
         } catch (error) {
-            console.error("Error fetching product details:", error);
+            triggerToast("Error fetching product data: " + error, "danger");
         }
     };
 
@@ -180,6 +190,7 @@ const CreatePurchaseOrder = () => {
         ["Currency", "Country", "Series", "Category", "Brand"],
         `${baseUrl}/api/masterdata`
     );
+
     
     if (loading) return <div>Loading...</div>;
     if (error) return <div>Error loading data</div>;
@@ -221,7 +232,7 @@ const CreatePurchaseOrder = () => {
             const poNumber = await response.text();
             setPurchaseOrderNumber(poNumber.replace(/"/g, "")); // Update state with the generated PO number
         } catch (error) {
-            console.error("Error fetching invoice number:", error);
+            triggerToast("Error generating purchase number: " + error, "danger");
         }
     };
 
@@ -229,6 +240,64 @@ const CreatePurchaseOrder = () => {
         setPurchaseOrderNumber(event.target.value); // Update state with the input value
     };
     
+    const submitPurchaseOrder = async (paid) => {
+        const invoiceTotal = totalAmount;
+        const invoiceData = {
+            PurchaseOrder: purchaseOrderNumber,
+            AdminId: localStorage.getItem("adminId"),
+            Supplier: selectedSupplier?.value,
+            BusinessID: selectedBusiness?.value,
+            Currency: currency?.value,
+            OrderDate: poDate,
+            TotalPrice: invoiceTotal,
+            PreOrder: preOrder === "on",
+            Remark: remark,
+            Items: productRows.map((row) => ({
+                ProductID: row.id,
+                Name: row.name,
+                Quantity: row.quantity,
+                Price: row.cost,
+            })),
+        };
+    
+        try {
+            let response;
+    
+            if (paid === 0) {
+                // Send as JSON when no files are uploaded
+                response = await fetch(`${baseUrl}/api/purchaseorder/register`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(invoiceData),
+                });
+            } else {
+                // If files need to be uploaded, use FormData
+                const formData = new FormData();
+                productRows.forEach((file, i) => formData.append(`image-${i}`, file));
+                formData.append("product", JSON.stringify(invoiceData));
+    
+                response = await fetch(`${baseUrl}/api/purchaseorder/register`, {
+                    method: "POST",
+                    body: formData,
+                });
+            }
+    
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "An error occurred while submitting the purchase order.");
+            }
+    
+            // Success
+            triggerToast("Register successful, logged in.", "success");
+            localStorage.setItem("selectedBusiness", selectedBusiness?.value || "");
+            window.location.reload();
+        } catch (error) {
+            triggerToast(error.message, "danger");
+        }
+    };
+
 	return (
 		<div>
 			<Seo title={"Purchase Order"} />
@@ -339,7 +408,7 @@ const CreatePurchaseOrder = () => {
                             </Card.Body>
 
 							<div className="py-2 px-3">
-								<button className="btn btn-primary mt-2 mb-2 pb-2" type="submit">Filter</button>
+								<button className="btn btn-primary mt-2 mb-2 pb-2" type="button" onClick={handleShowPaymentConfirmationModal}>Create Purchase Order</button>
 							</div>
 						</Card>
 					</Card>
@@ -387,7 +456,6 @@ const CreatePurchaseOrder = () => {
 
             </Row>
 
-            {/* Modals for Supplier and Product */}
             <CreateSupplierModal
                 show={showSupplierModal}
                 onClose={handleCloseSupplierModal}
@@ -404,6 +472,30 @@ const CreatePurchaseOrder = () => {
                 brandOptions={brandOptions}
                 baseUrl={baseUrl}
                 populateProduct={fetchProductData}
+            />
+            <ToastContainer   className="toast-container position-fixed top-50 start-50 translate-middle">
+                <Toast  className="toast fade show mt-2" show={showPaymentConfirmationModal}>
+                    <Toast.Body>
+                        Purchase Order Paid?
+                        <div  className="mt-2 pt-2 border-top">
+                            <Button type="button" className="btn btn-primary btn-sm btn-wave mx-1" onClick={handleShowPaymentModal}>
+                                Yes
+                            </Button>
+                            <Button type="button" className="btn btn-warning btn-sm btn-wave mx-1" onClick={submitPurchaseOrder}>
+                                No
+                            </Button>
+                            <Button type="button" className="btn btn-danger btn-sm btn-wave mx-1" onClick={handleClosePaymentConfirmationModal}>
+                                Close
+                            </Button>
+                        </div>
+                    </Toast.Body>
+                </Toast>
+            </ToastContainer>
+
+            <CreatePaymentModal
+                show={showPaymentModal}
+                onClose={handleClosePaymentModal}
+                baseUrl={baseUrl}
             />
 		</div>
 	);

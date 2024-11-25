@@ -774,60 +774,6 @@ export const MENUITEMS = [
 		],
 	},
 	{
-		menutitle: "MULTI LEVEL",
-	},
-	{
-		title: "Menu Levels", icon: <svg xmlns="http://www.w3.org/2000/svg" className="side-menu__icon" width="24" height="24" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"></path></svg>, type: "sub", active: false, selected: false, dirchange: false,
-		children: [
-			{
-				path: "",
-				title: "Level-1",
-				type: "empty",
-				active: false,
-				selected: false,
-			},
-			{
-				title: "Level-2",
-				type: "sub",
-				selected: false,
-				active: false,
-				children: [
-					{
-						path: "",
-						title: "Level-2.1",
-						type: "empty",
-						active: false,
-						selected: false,
-					},
-					{
-						
-						title: "Level-2.2",
-						type: "sub",
-						active: false,
-						selected: false,
-						children:[
-							{
-								path: "",
-								title: "Level-2.2.1",
-								type: "empty",
-								active: false,
-								selected: false,
-							},
-							{
-								path: "",
-								title: "Level-2.2.2",
-								type: "empty",
-								active: false,
-								selected: false,
-							},
-						]
-					},
-
-				],
-			},
-		],
-	},
-	{
 		menutitle: "COMPONENTS",
 	},
 	{
@@ -871,28 +817,6 @@ export const MENUITEMS = [
 			},    
 			{ path: "/components/forms/validation", type: "link", active: false, selected: false, dirchange: false, title: "Validation" },
 			{ path: "/components/forms/select2", type: "link", active: false, selected: false, dirchange: false, title: "Select2" },
-		],
-	},
-	{
-		title: "Tables",
-		icon: (
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				className="side-menu__icon"
-				width="24"
-				height="24"
-				viewBox="0 0 24 24"
-			>
-				<path d="M19 3H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2zm0 2 .001 4H5V5h14zM5 11h8v8H5v-8zm10 8v-8h4.001l.001 8H15z" />
-			</svg>
-		),
-		type: "sub",
-		selected: false,
-		active: false,
-		children: [
-			{ path: "/components/tables/tables", type: "link", active: false, selected: false, dirchange: false, title: "Tables" },
-			{ path: "/components/tables/gridjs", type: "link", active: false, selected: false, dirchange: false, title: "Grid JS Tables" },
-			{ path: "/components/tables/datatables", type: "link", active: false, selected: false, dirchange: false, title: "Data Tables" },
 		],
 	},
 	{

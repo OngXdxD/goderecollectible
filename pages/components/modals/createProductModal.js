@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button, Modal, FormGroup, InputGroup, Form } from "react-bootstrap";
-import Select from "react-select";
+import CreatableSelect from "react-select/creatable";
 import useToast from "../toast/toastContext";
 
 const CreateProductModal = ({
@@ -13,7 +13,7 @@ const CreateProductModal = ({
     baseUrl,
     populateProduct
 }) => {
-    const { triggerSuccessToast } = useToast();
+    const { triggerToast } = useToast();
     const [newProduct, setNewProduct] = useState("");
     const [series, setSeries] = useState("");
     const [category, setCategory] = useState("");
@@ -30,7 +30,7 @@ const CreateProductModal = ({
         if (!price || isNaN(price) || price <= 0) errors.push("Valid Product Price is required.");
 
         if (errors.length > 0) {
-            alert(errors.join("\n"));
+            triggerToast(errors.join("<br />"), "danger");
             return;
         }
 
@@ -59,7 +59,7 @@ const CreateProductModal = ({
                 const errorData = await response.json();
                 throw new Error(errorData.message || "Failed to register product.");
             }
-            triggerSuccessToast("Product register successful!");
+            triggerToast("Product register successful!");
             onClose(); // Close modal
             populateProduct(); // Refresh product dropdown
             // Clear fields
@@ -69,13 +69,24 @@ const CreateProductModal = ({
             setBrand("");
             setPrice("");
         } catch (error) {
-            alert(error.message);
+            triggerToast(error.message, "danger");
         }
     };
 
     return (
 
-        <Modal show={show} onHide={onClose}>
+        <Modal 
+            show={show}
+            onHide={onClose}
+            onExited={() => {
+                // Clear fields when modal is completely closed
+                setNewProduct("");
+                setSeries("");
+                setCategory("");
+                setBrand("");
+                setPrice("");
+            }}
+        >
             <Modal.Header closeButton>
                 <Modal.Title>Create Product</Modal.Title>
             </Modal.Header>
@@ -93,7 +104,7 @@ const CreateProductModal = ({
                 </FormGroup>
                 <FormGroup className="form-group mt-2">
                     <Form.Label className="form-label">Series</Form.Label>
-                    <Select
+                    <CreatableSelect
                         options={seriesOptions}
                         value={seriesOptions?.find((option) => option.value === series)}
                         onChange={(option) => setSeries(option.value)}
@@ -102,7 +113,7 @@ const CreateProductModal = ({
                 </FormGroup>
                 <FormGroup className="form-group mt-2">
                     <Form.Label className="form-label">Category</Form.Label>
-                    <Select
+                    <CreatableSelect
                         options={categoryOptions}
                         value={categoryOptions?.find((option) => option.value === category)}
                         onChange={(option) => setCategory(option.value)}
@@ -111,7 +122,7 @@ const CreateProductModal = ({
                 </FormGroup>
                 <FormGroup className="form-group mt-2">
                     <Form.Label className="form-label">Brand</Form.Label>
-                    <Select
+                    <CreatableSelect
                         options={brandOptions}
                         value={brandOptions?.find((option) => option.value === brand)}
                         onChange={(option) => setBrand(option.value)}

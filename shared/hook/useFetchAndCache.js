@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { getCachedDataWithVersion, cacheDataWithVersion } from '../helper/cacheHelpers';  // Import helper functions
 import {
     getVersionForCategory,
     setVersionForCategory,
@@ -58,9 +57,8 @@ const useFetchAndCache = (categories, apiFetchUrl, cachePrefix) => {
                 for (const category of categories) {
                     setDataForCategory(category, fetchedData[category.toLowerCase()]);
                     setVersionForCategory(category, currentVersion[category]);
-                    newData[category] = fetchedData[category];
+                    newData[category] = fetchedData[category.toLowerCase()];
                 }
-
                 setData(newData);
                 setLoading(false);
             } catch (err) {
