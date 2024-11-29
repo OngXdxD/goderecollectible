@@ -52,7 +52,7 @@ export const MENUITEMS = [
 		title: "Sales Order",
 		children: [
 			{
-				path: "/components/dashboards/dashboard10",
+				path: "/components/createsalesorder/salesorder",
 				type: "link",
 				active: false,
 				selected: false,
