@@ -44,8 +44,6 @@ const CreateSalesOrder = () => {
     const previewRef = useRef(null);
 
 
-
-    // Modal state
     const [showCustomerModal, setShowCustomerModal] = useState(false);
     const [showProductModal, setShowProductModal] = useState(false);
     const [showBankModal, setShowBankModal] = useState(false);
@@ -77,7 +75,7 @@ const CreateSalesOrder = () => {
                 throw new Error("Failed to fetch SO number");
             }
             const soNumber = await response.text();
-            setSalesOrderNumber(soNumber.replace(/"/g, "")); // Update state with the generated PO number
+            setSalesOrderNumber(soNumber.replace(/"/g, ""));
         } catch (error) {
             console.error("Error fetching SO number:", error);
         }
@@ -98,7 +96,7 @@ const CreateSalesOrder = () => {
     };
 
     const handleBusinessSelect = (selectedOption) => {
-        setSelectedBusiness(selectedOption); // Update the selected business state
+        setSelectedBusiness(selectedOption); 
     };
 
     const fetchBankData = async () => {
@@ -106,7 +104,7 @@ const CreateSalesOrder = () => {
             const response = await fetch(`${baseUrl}/api/bank/selectall`);
             const banks = await response.json();
             const formattedBanks = banks.map(bank => ({
-                value: bank.Id,  // Adjust the property names based on your actual data structure
+                value: bank.Id, 
                 label: bank.Name
             }));
             setBankList(formattedBanks);
@@ -116,7 +114,7 @@ const CreateSalesOrder = () => {
     };
 
     const handleBankSelect = (selectedOption) => {
-        setSelectedBank(selectedOption); // Update the selected business state
+        setSelectedBank(selectedOption);
     };
     
 
@@ -135,10 +133,10 @@ const CreateSalesOrder = () => {
     };
 
     const handleCustomerSelect = async (selectedOption) => {
-        setSelectedCustomer(selectedOption); // Update the selected business state
+        setSelectedCustomer(selectedOption); 
 
         if (!selectedOption) {
-            setSelectedCustomer(null); // Clear customer details if no option selected
+            setSelectedCustomer(null); 
             return;
         }
 
@@ -173,7 +171,6 @@ const CreateSalesOrder = () => {
             const response = await fetch(`${baseUrl}/api/customerproduct/details/${productId}`);
             const productDetails = await response.json();
 
-            // Prevent duplicates by checking if productId already exists
             const isDuplicate = productRows.some((row) => row.id === productId);
             if (isDuplicate) {
                 return;
@@ -182,9 +179,9 @@ const CreateSalesOrder = () => {
             const newRow = {
                 id: productId,
                 name: productDetails.Name,
-                quantity: 1, // Default quantity
-                price: productDetails.Price, // Default price
-                deposit: 0, // Default deposit
+                quantity: 1, 
+                price: productDetails.Price, 
+                deposit: 0, 
                 totalPrice: productDetails.Price,
             };
 
@@ -196,28 +193,28 @@ const CreateSalesOrder = () => {
     };
 
     const handleProductSelect = (selectedOptions) => {
-        // Add new products to the table
+
         const selectedIds = selectedOptions.map((option) => option.value);
     
-        // Add newly selected products
+
         selectedOptions.forEach((option) => {
             if (!productRows.find((row) => row.id === option.value)) {
                 fetchProductDetails(option.value);
             }
         });
     
-        // Remove products that are no longer in the dropdown
+
         const updatedRows = productRows.filter((row) => selectedIds.includes(row.id));
         setProductRows(updatedRows);
     
-        // Update totals explicitly after updating productRows
+       
         const updatedTotal = updatedRows.reduce((acc, row) => acc + row.totalPrice, 0);
         setTotalAmount(updatedTotal);
     
         const updatedDeposit = updatedRows.reduce((acc, row) => acc + row.deposit, 0);
         setTotalDeposit(updatedDeposit);
     
-        // Update the selected products
+        
         setSelectedProduct(selectedOptions);
     };
 
@@ -229,7 +226,7 @@ const CreateSalesOrder = () => {
     const updateDeposit = () => {
         setDepositRows(currentRows => {
             const totalDeposit = currentRows.reduce((acc, row) => acc + (parseFloat(row.deposit) || 0), 0);
-            setTotalDeposit(totalDeposit); // Update the state of totalDeposit based on all row deposits
+            setTotalDeposit(totalDeposit); 
             return currentRows;
         });
     };
@@ -239,7 +236,7 @@ const CreateSalesOrder = () => {
         updatedRows[index].quantity = parseFloat(quantity) || 0;
         updatedRows[index].totalPrice = updatedRows[index].quantity * updatedRows[index].price;
         setProductRows(updatedRows);
-        updateTotals(); // Ensure totals are updated after state change
+        updateTotals(); 
     };
 
     const updateRowPrice = (index, price) => {
@@ -247,7 +244,7 @@ const CreateSalesOrder = () => {
         updatedRows[index].price = parseFloat(price) || 0;
         updatedRows[index].totalPrice = updatedRows[index].quantity * updatedRows[index].price;
         setProductRows(updatedRows);
-        updateTotals(); // Ensure totals are updated after state change
+        updateTotals(); 
     };
 
     const updateRowDeposit = (index, deposit) => {
@@ -259,15 +256,15 @@ const CreateSalesOrder = () => {
             updatedRows[index].deposit = parseFloat(deposit) || 0;
             return updatedRows;
         });
-        updateDeposit(); // Ensure this function correctly sums all deposits.
+        updateDeposit(); 
     };
 
     const handleCurrencyChange = (selectedOption) => {
-        setCurrency(selectedOption || {});  // Store the entire selected option or an empty object if none is selected
+        setCurrency(selectedOption || {}); 
     };
 
     const handlePaymentMethodChange = (selectedOption) => {
-        setSelectedPaymentMethod(selectedOption); // Update the selected payment method state
+        setSelectedPaymentMethod(selectedOption);
     };
 
     const { data: dropdownData, loading, error } = useFetchAndCache(
@@ -316,7 +313,7 @@ const CreateSalesOrder = () => {
     const submitSalesOrder = async () => {
         if (!selectedBusiness || !selectedCustomer || !currency || !selectedPaymentMethod || !selectedBank || productRows.length === 0) {
             triggerToast("Please select all required fields before submitting.", "danger");
-            return;  // Stop execution if the necessary selections are missing
+            return; 
         }
 
         const salesTotal = totalAmount;
@@ -343,7 +340,6 @@ const CreateSalesOrder = () => {
         };
     
         try {
-            // Always send as JSON since no file uploading is required
             const response = await fetch(`${baseUrl}/api/bizsalesorder/register`, {
                 method: "POST",
                 headers: {
@@ -357,7 +353,6 @@ const CreateSalesOrder = () => {
                 throw new Error(errorData.message || "An error occurred while submitting the sales order.");
             }
     
-            // Success
             triggerToast("Sales Order Created Successfully!", "success");
             localStorage.setItem("selectedBusiness", selectedBusiness?.value || "");
             setTimeout(() => {
@@ -390,13 +385,10 @@ const CreateSalesOrder = () => {
         const printContent = previewRef.current;
         const originalContent = document.body.innerHTML;
 
-        // Replace body content with the preview content
         document.body.innerHTML = printContent.innerHTML;
 
-        // Trigger the print dialog
         window.print();
 
-        // Restore original content
         document.body.innerHTML = originalContent;
 
     };

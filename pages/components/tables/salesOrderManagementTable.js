@@ -49,7 +49,6 @@ const SalesOrderManagementTable = () => {
         minPrice = minTotalPrice,
         maxPrice = maxTotalPrice) => {
 
-        console.log('Fetching with:', { search, field, order, customer }); // Log to see what is being sent to the fetch
         const offset = (currentPage - 1) * itemsPerPage;
         const sortQuery = field ? `&sortField=${field}&sortOrder=${order}` : '';
         const customerQuery = customer ? `&customerName=${encodeURIComponent(customer)}` : '';
@@ -196,9 +195,9 @@ const SalesOrderManagementTable = () => {
     const toggleFilter = () => setShowFilter(!showFilter);
 
     const applyFilters = () => {
-        setCurrentPage(1); // Reset to first page
+        setCurrentPage(1); 
         fetchSalesOrders(searchTerm, sortField, sortOrder, selectedCustomer, selectedBusiness, startDate, endDate, minTotalPrice, maxTotalPrice);
-        setShowFilter(false); // Close the offcanvas
+        setShowFilter(false); 
 
     };
 
@@ -212,9 +211,8 @@ const SalesOrderManagementTable = () => {
         setSearchTerm('');
         setCurrentPage(1);
 
-        // Fetch data without filters
         fetchSalesOrders('', '', '', '', '', '', '', '');
-        setShowFilter(false); // Close the offcanvas
+        setShowFilter(false); 
 
     };
 
