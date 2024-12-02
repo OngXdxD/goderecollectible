@@ -354,12 +354,11 @@ const CreateSalesOrder = () => {
     
             if (!response.ok) {
                 const errorData = await response.json();
-                console.log('errorData', errorData)
                 throw new Error(errorData.message || "An error occurred while submitting the sales order.");
             }
     
             // Success
-            triggerToast("Sales Order created successfully!", "success");
+            triggerToast("Sales Order Created Successfully!", "success");
             localStorage.setItem("selectedBusiness", selectedBusiness?.value || "");
             setTimeout(() => {
                 window.location.reload();
