@@ -272,8 +272,9 @@ const SalesOrderManagementTable = () => {
                                     <Button variant="primary" className="me-2" onClick={toggleFilter}>
                                         <FontAwesomeIcon icon={faFilter} />
                                     </Button>
-                                    <Button variant="danger" onClick={() => handleDelete()}>
+                                    <Button variant="danger" onClick={() => handleDelete()} disabled={selectedOrders.length === 0}>
                                         <FontAwesomeIcon icon={faTrash} />
+                                        
                                     </Button>
 
                                     <SalesOrderFilterOffcanvas
