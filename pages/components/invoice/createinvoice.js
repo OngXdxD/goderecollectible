@@ -65,7 +65,31 @@ const CreateInvoice = () => {
         setTotalDeposit(totalDeposit);
         const updatedBalance = total - totalDeposit - (parseFloat(paid) || 0); // Subtract deposit and paid amount
         setBalance(updatedBalance);
+        const handleKeyPress = (event) => {
+            if (event.ctrlKey && event.key === 'p') {
+                event.preventDefault(); // Prevent the default print dialog
+                handlePrint(); // Call your print function
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyPress);
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyPress);
+        };
     }, [productRows, paid]);
+
+    const handlePrint = () => {
+        const printContent = previewRef.current;
+        const originalContent = document.body.innerHTML;
+
+        document.body.innerHTML = printContent.innerHTML;
+
+        window.print();
+
+        document.body.innerHTML = originalContent;
+
+    };
 
     const generateInvoiceNumber = async () => {
         try {
@@ -425,17 +449,7 @@ const CreateInvoice = () => {
         setBalance("");
     };
 
-    const handlePrint = () => {
-        const printContent = previewRef.current;
-        const originalContent = document.body.innerHTML;
 
-        document.body.innerHTML = printContent.innerHTML;
-
-        window.print();
-
-        document.body.innerHTML = originalContent;
-
-    };
 
 
 
