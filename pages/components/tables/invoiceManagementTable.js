@@ -7,14 +7,14 @@ import DeleteSalesOrderModal from "../modals/deleteSalesOrderModal";
 import useToast from "../toast/toastContext";
 import SalesOrderFilterOffcanvas from "../offcanvas/salesOrderFilterOffcanvas";
 
-const SalesOrderManagementTable = () => {
-    const [salesOrders, setSalesOrders] = useState([]);
+const InvoiceManagementTable = () => {
+    const [invoice, setInvoice] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [totalRecords, setTotalRecords] = useState(0);
     const [selectAll, setSelectAll] = useState(false);
-    const [selectedOrders, setSelectedOrders] = useState([]);
+    const [selectedInvoice, setSelectedInvoice] = useState([]);
     const [sortField, setSortField] = useState('');
     const [sortOrder, setSortOrder] = useState('asc');
     const [showModal, setShowModal] = useState(false);
@@ -33,12 +33,12 @@ const SalesOrderManagementTable = () => {
 
 
     useEffect(() => {
-        fetchSalesOrders();
+        fetchInvoice();
         fetchCustomerData();
         fetchBusinessData();
     }, [currentPage, itemsPerPage]);
 
-    const fetchSalesOrders = async (
+    const fetchInvoice = async (
         search = searchTerm,
         field = sortField,
         order = sortOrder,
@@ -58,14 +58,15 @@ const SalesOrderManagementTable = () => {
         const maxPriceQuery = maxPrice ? `&maxTotalPrice=${maxPrice}` : '';
 
         try {
-            const response = await fetch(`${baseUrl}/api/bizsalesorder/getAllSalesOrder?search=${encodeURIComponent(search)}&start=${offset}&length=${itemsPerPage}${sortQuery}${customerQuery}${businessQuery}${dateQuery}${minPriceQuery}${maxPriceQuery}`, {
+            const response = await fetch(`${baseUrl}/api/customerinvoice/getAllInvoices?search=${encodeURIComponent(search)}&start=${offset}&length=${itemsPerPage}${sortQuery}${customerQuery}${businessQuery}${dateQuery}${minPriceQuery}${maxPriceQuery}`, {
                 method: 'GET',
             });
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
             const data = await response.json();
-            setSalesOrders(data.data);
+            console.log('data', data)
+            setInvoice(data.data);
             setTotalRecords(data.recordsTotal);
 
         } catch (error) {
@@ -80,7 +81,7 @@ const SalesOrderManagementTable = () => {
     const handleClear = () => {
         setSearchTerm('');
         setCurrentPage(1);
-        fetchSalesOrders('', 1, itemsPerPage);
+        fetchInvoice('', 1, itemsPerPage);
     };
     const renderPagination = () => {
         const items = [];
@@ -108,7 +109,7 @@ const SalesOrderManagementTable = () => {
     };
 
     const handleCheckboxChange = (soNumber) => {
-        setSelectedOrders((prev) =>
+        setSelectedInvoice((prev) =>
             prev.includes(soNumber)
                 ? prev.filter((num) => num !== soNumber)
                 : [...prev, soNumber]
@@ -118,43 +119,43 @@ const SalesOrderManagementTable = () => {
     const handleSelectAll = () => {
         setSelectAll((prev) => !prev);
         if (!selectAll) {
-            setSelectedOrders(salesOrders.map((order) => order.SalesOrder));
+            setSelectedInvoice(invoice.map((i) => i.InvoiceNumber));
         } else {
-            setSelectedOrders([]);
+            setSelectedInvoice([]);
         }
     };
 
     const handleDelete = (soNumber) => {
-        setDeleteTarget(soNumber ? [soNumber] : selectedOrders);
+        setDeleteTarget(soNumber ? [soNumber] : selectedInvoice);
         setShowModal(true);
     };
 
     const confirmDelete = async () => {
-        deleteTarget.forEach(async (order) => {
-            const response = await fetch(`${baseUrl}/api/bizsalesorder/delete/${order}`, {
+        deleteTarget.forEach(async (invoice) => {
+            const response = await fetch(`${baseUrl}/api/customerinvoice/delete/${invoice}`, {
                 method: 'DELETE',
             });
             if (response.ok) {
-                console.log("Deleted:", order);
+                console.log("Deleted:", invoice);
             } else {
-                console.error("Failed to delete:", order);
+                console.error("Failed to delete:", invoice);
             }
         });
 
-        setSalesOrders(salesOrders.filter(order => !deleteTarget.includes(order.SalesOrder)));
-        setSelectedOrders(prev => prev.filter(order => !deleteTarget.includes(order)));
+        setInvoice(invoice.filter(invoice => !deleteTarget.includes(invoice.InvoiceNumber)));
+        setSelectedInvoice(prev => prev.filter(invoice => !deleteTarget.includes(invoice)));
         setShowModal(false);
-        triggerToast("Sales Order Deleted Successfully!", "success");
+        triggerToast("Invoice Deleted Successfully!", "success");
 
     };
 
     const sortData = (field, order) => {
-        const sortedData = [...salesOrders].sort((a, b) => {
+        const sortedData = [...invoice].sort((a, b) => {
             if (a[field] < b[field]) return order === 'asc' ? -1 : 1;
             if (a[field] > b[field]) return order === 'asc' ? 1 : -1;
             return 0;
         });
-        setSalesOrders(sortedData);
+        setInvoice(sortedData);
     };
 
     const handleSort = (field) => {
@@ -196,7 +197,7 @@ const SalesOrderManagementTable = () => {
 
     const applyFilters = () => {
         setCurrentPage(1);
-        fetchSalesOrders(searchTerm, sortField, sortOrder, selectedCustomer, selectedBusiness, startDate, endDate, minTotalPrice, maxTotalPrice);
+        fetchInvoice(searchTerm, sortField, sortOrder, selectedCustomer, selectedBusiness, startDate, endDate, minTotalPrice, maxTotalPrice);
         setShowFilter(false);
 
     };
@@ -211,7 +212,7 @@ const SalesOrderManagementTable = () => {
         setSearchTerm('');
         setCurrentPage(1);
 
-        fetchSalesOrders('', '', '', '', '', '', '', '');
+        fetchInvoice('', '', '', '', '', '', '', '');
         setShowFilter(false);
 
     };
@@ -229,7 +230,7 @@ const SalesOrderManagementTable = () => {
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
-                                fetchSalesOrders();
+                                fetchInvoice();
                             }
                         }}
                     />
@@ -239,7 +240,7 @@ const SalesOrderManagementTable = () => {
                             Clear
                         </Button>
                     )}
-                    <Button variant="dark" onClick={() => fetchSalesOrders()}>
+                    <Button variant="dark" onClick={() => fetchInvoice()}>
                         Search
                     </Button>
 
@@ -272,7 +273,7 @@ const SalesOrderManagementTable = () => {
                                     <Button variant="primary" className="me-2" onClick={toggleFilter}>
                                         <FontAwesomeIcon icon={faFilter} />
                                     </Button>
-                                    <Button variant="danger" onClick={() => handleDelete()} disabled={selectedOrders.length === 0}>
+                                    <Button variant="danger" onClick={() => handleDelete()} disabled={selectedInvoice.length === 0}>
                                         <FontAwesomeIcon icon={faTrash} />
 
                                     </Button>
@@ -309,10 +310,10 @@ const SalesOrderManagementTable = () => {
                                 onChange={handleSelectAll}
                             />
                         </th>
-                        <th onClick={() => handleSort('SalesOrder')}>
-                            SO Number
+                        <th onClick={() => handleSort('InvoiceNumber')}>
+                            Invoice Number
                             <span style={{ float: 'right' }}>
-                                {sortField === 'SalesOrder' ? (sortOrder === 'asc' ? <FontAwesomeIcon icon={faSortUp} /> : <FontAwesomeIcon icon={faSortDown} />) : <FontAwesomeIcon icon={faSortDown} />}
+                                {sortField === 'InvoiceNumber' ? (sortOrder === 'asc' ? <FontAwesomeIcon icon={faSortUp} /> : <FontAwesomeIcon icon={faSortDown} />) : <FontAwesomeIcon icon={faSortDown} />}
                             </span>
                         </th>
                         <th onClick={() => handleSort('CustomerName')}>
@@ -327,10 +328,10 @@ const SalesOrderManagementTable = () => {
                                 {sortField === 'BusinessName' ? (sortOrder === 'asc' ? <FontAwesomeIcon icon={faSortUp} /> : <FontAwesomeIcon icon={faSortDown} />) : <FontAwesomeIcon icon={faSortDown} />}
                             </span>
                         </th>
-                        <th onClick={() => handleSort('OrderDate')}>
+                        <th onClick={() => handleSort('InvoiceDate')}>
                             Date
                             <span style={{ float: 'right' }}>
-                                {sortField === 'OrderDate' ? (sortOrder === 'asc' ? <FontAwesomeIcon icon={faSortUp} /> : <FontAwesomeIcon icon={faSortDown} />) : <FontAwesomeIcon icon={faSortDown} />}
+                                {sortField === 'InvoiceDate' ? (sortOrder === 'asc' ? <FontAwesomeIcon icon={faSortUp} /> : <FontAwesomeIcon icon={faSortDown} />) : <FontAwesomeIcon icon={faSortDown} />}
                             </span>
                         </th>
                         <th onClick={() => handleSort('TotalPrice')}>
@@ -343,26 +344,26 @@ const SalesOrderManagementTable = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {salesOrders.length > 0 ? (
-                        salesOrders.map((order, index) => (
-                            <tr key={order.SalesOrder}>
+                    {invoice.length > 0 ? (
+                        invoice.map((invoice, index) => (
+                            <tr key={invoice.InvoiceNumber}>
                                 <td style={{ textAlign: "center" }}>
                                     <input
                                         type="checkbox"
-                                        checked={selectedOrders.includes(order.SalesOrder)}
-                                        onChange={() => handleCheckboxChange(order.SalesOrder)}
+                                        checked={selectedInvoice.includes(invoice.InvoiceNumber)}
+                                        onChange={() => handleCheckboxChange(invoice.InvoiceNumber)}
                                     />
                                 </td>
-                                <td>{order.SalesOrder}</td>
-                                <td>{order.CustomerName}</td>
-                                <td>{order.BusinessName}</td>
-                                <td>{new Date(order.OrderDate).toLocaleDateString()}</td>
-                                <td>{Intl.NumberFormat("en-US").format(order.TotalPrice)}</td>
+                                <td>{invoice.InvoiceNumber}</td>
+                                <td>{invoice.CustomerName}</td>
+                                <td>{invoice.BusinessName}</td>
+                                <td>{new Date(invoice.InvoiceDate).toLocaleDateString()}</td>
+                                <td>{Intl.NumberFormat("en-US").format(invoice.TotalPrice)}</td>
                                 <td>
                                     <Button className="me-2 btn-info" >
                                         <FontAwesomeIcon icon={faEye} />
                                     </Button>
-                                    <Button variant="danger" onClick={() => handleDelete(order.SalesOrder)}>
+                                    <Button variant="danger" onClick={() => handleDelete(invoice.InvoiceNumber)}>
                                         <FontAwesomeIcon icon={faTrash} />
                                     </Button>
                                 </td>
@@ -389,4 +390,4 @@ const SalesOrderManagementTable = () => {
     );
 };
 
-export default SalesOrderManagementTable;
+export default InvoiceManagementTable;

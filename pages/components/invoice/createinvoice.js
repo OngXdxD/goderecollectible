@@ -6,22 +6,20 @@ import dynamic from "next/dynamic";
 import Pageheader from "../../../shared/layout-components/pageheader/pageheader";
 import { baseUrl } from '../../api/config';
 import useFetchAndCache from '../../../shared/hook/useFetchAndCache';
-import { Toast, ToastContainer } from "react-bootstrap";
-import SalesOrderTable from "../tables/createSalesOrderTable";
-import { WidthNormal } from "@mui/icons-material";
 import CreateProductModal from "../modals/createProductModal";
 import CreateCustomerModal from "../modals/createCustomerModal";
 import CreateBankModal from "../modals/createBankModal";
 import useToast from "../toast/toastContext";
+import InvoiceTable from "../tables/createInvoiceTable";
 
-const CreateSalesOrder = () => {
+const CreateInvoice = () => {
 
     const getCurrentDate = () => {
         const today = new Date();
         return today.toISOString().split('T')[0]; // Format to YYYY-MM-DD
     };
 
-    const [salesOrderNumber, setSalesOrderNumber] = useState("");
+    const [invoiceNumber, setInvoiceNumber] = useState("");
     const [businessList, setBusinessList] = useState([]);
     const [selectedBusiness, setSelectedBusiness] = useState("");
     const [customerList, setCustomerList] = useState(null);
@@ -30,7 +28,7 @@ const CreateSalesOrder = () => {
     const [selectedBank, setSelectedBank] = useState("");
     const [productList, setProductList] = useState(null);
     const [currency, setCurrency] = useState("");
-    const [soDate, setSoDate] = useState(getCurrentDate());;
+    const [invoiceDate, setInvoiceDate] = useState(getCurrentDate());;
     const [paid, setPaid] = useState("");
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
     const [remark, setRemark] = useState("");
@@ -42,7 +40,8 @@ const CreateSalesOrder = () => {
     const [balance, setBalance] = useState("");
     const { triggerToast } = useToast();
     const previewRef = useRef(null);
-
+    const [salesOrderList, setSalesOrderList] = useState([]); // State for Sales Order dropdown
+    const [selectedSalesOrder, setSelectedSalesOrder] = useState(""); // State for selected Sales Order
 
     const [showCustomerModal, setShowCustomerModal] = useState(false);
     const [showProductModal, setShowProductModal] = useState(false);
@@ -59,25 +58,27 @@ const CreateSalesOrder = () => {
         fetchCustomerData();
         fetchProductData();
         fetchBankData();
-        generateSO();
+        generateInvoiceNumber();
         const total = productRows.reduce((acc, row) => acc + row.totalPrice, 0);
         setTotalAmount(total);
-        const updatedBalance = totalAmount - paid;        
+        const totalDeposit = productRows.reduce((acc, row) => acc + (parseFloat(row.deposit) || 0), 0);
+        setTotalDeposit(totalDeposit);
+        const updatedBalance = total - totalDeposit - (parseFloat(paid) || 0); // Subtract deposit and paid amount
         setBalance(updatedBalance);
     }, [productRows, paid]);
 
-    const generateSO = async () => {
+    const generateInvoiceNumber = async () => {
         try {
-            const response = await fetch(`${baseUrl}/api/bizsalesorder/getSONumber`, {
+            const response = await fetch(`${baseUrl}/api/customerinvoice/getInvoiceNumber`, {
                 method: 'GET',
             });
             if (!response.ok) {
                 throw new Error("Failed to fetch SO number");
             }
-            const soNumber = await response.text();
-            setSalesOrderNumber(soNumber.replace(/"/g, ""));
+            const invoiceNumber = await response.text();
+            setInvoiceNumber(invoiceNumber.replace(/"/g, ""));
         } catch (error) {
-            console.error("Error fetching SO number:", error);
+            console.error("Error fetching invoice number:", error);
         }
     };
 
@@ -96,7 +97,7 @@ const CreateSalesOrder = () => {
     };
 
     const handleBusinessSelect = (selectedOption) => {
-        setSelectedBusiness(selectedOption); 
+        setSelectedBusiness(selectedOption);
     };
 
     const fetchBankData = async () => {
@@ -104,7 +105,7 @@ const CreateSalesOrder = () => {
             const response = await fetch(`${baseUrl}/api/bank/selectall`);
             const banks = await response.json();
             const formattedBanks = banks.map(bank => ({
-                value: bank.Id, 
+                value: bank.Id,
                 label: bank.Name
             }));
             setBankList(formattedBanks);
@@ -116,7 +117,7 @@ const CreateSalesOrder = () => {
     const handleBankSelect = (selectedOption) => {
         setSelectedBank(selectedOption);
     };
-    
+
 
     const fetchCustomerData = async () => {
         try {
@@ -132,14 +133,44 @@ const CreateSalesOrder = () => {
         }
     };
 
-    const handleCustomerSelect = async (selectedOption) => {
-        setSelectedCustomer(selectedOption); 
-
-        if (!selectedOption) {
-            setSelectedCustomer(null); 
+    const fetchSalesOrders = async (customerName) => {
+        if (!customerName) {
+            setSalesOrderList([]); 
             return;
         }
 
+        try {
+            const response = await fetch(`${baseUrl}/api/bizsalesorder/getAllSalesOrder?customerName=${encodeURIComponent(customerName)}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch sales orders");
+            }
+            const data = await response.json();
+
+            const salesOrders = data.data.map((order) => ({
+                value: order.Id,
+                label: order.SalesOrder,
+            }));
+            
+            setSalesOrderList(salesOrders); // Update state
+        } catch (error) {
+            console.error("Error fetching sales orders:", error);
+        }
+    };
+
+    const handleCustomerSelect = async (selectedOption) => {
+        setSelectedCustomer(selectedOption);
+    
+        setSalesOrderList([]);
+        setSelectedSalesOrder(null);  
+        setProductRows([]);         
+        setDepositRows([]);           
+        setSelectedProduct([]);   
+    
+        if (!selectedOption) {
+            setSelectedCustomer(null);
+            return;
+        }
+    
         try {
             const response = await fetch(`${baseUrl}/api/customer/details/${selectedOption.value}`);
             if (!response.ok) {
@@ -147,8 +178,39 @@ const CreateSalesOrder = () => {
             }
             const customerDetails = await response.json();
             setSelectedCustomer(customerDetails);
+            fetchSalesOrders(customerDetails.Customer?.Name); // Fetch new Sales Orders for the selected customer
         } catch (error) {
             console.error("Error fetching customer details:", error);
+        }
+    };
+
+    const fetchSalesOrderItems = async (salesOrderId) => {
+        try {
+            const response = await fetch(`${baseUrl}/api/bizsalesorder/details/${salesOrderId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setProductRows(data.map(item => ({
+                    id: item.ProductID,
+                    name: item.Name,
+                    quantity: item.Quantity,
+                    deposit: item.Deposit,
+                    price: item.Price,
+                    totalPrice: item.Price * item.Quantity
+                })));
+            } else {
+                throw new Error("Failed to fetch sales order items");
+            }
+        } catch (error) {
+            console.error("Error fetching sales order items:", error);
+        }
+    };
+
+    const handleSalesOrderSelect = (selectedOption) => {
+        setSelectedSalesOrder(selectedOption);
+        if (selectedOption && selectedOption.value) {
+            fetchSalesOrderItems(selectedOption.value);
+        } else {
+            setProductRows([]); // Clear the table if no sales order is selected
         }
     };
 
@@ -179,9 +241,9 @@ const CreateSalesOrder = () => {
             const newRow = {
                 id: productId,
                 name: productDetails.Name,
-                quantity: 1, 
-                price: productDetails.Price, 
-                deposit: 0, 
+                quantity: 1,
+                price: productDetails.Price,
+                deposit: 0,
                 totalPrice: productDetails.Price,
             };
 
@@ -193,28 +255,13 @@ const CreateSalesOrder = () => {
     };
 
     const handleProductSelect = (selectedOptions) => {
-
-        const selectedIds = selectedOptions.map((option) => option.value);
     
-
         selectedOptions.forEach((option) => {
             if (!productRows.find((row) => row.id === option.value)) {
-                fetchProductDetails(option.value);
+                fetchProductDetails(option.value); // Add the new product
             }
         });
     
-
-        const updatedRows = productRows.filter((row) => selectedIds.includes(row.id));
-        setProductRows(updatedRows);
-    
-       
-        const updatedTotal = updatedRows.reduce((acc, row) => acc + row.totalPrice, 0);
-        setTotalAmount(updatedTotal);
-    
-        const updatedDeposit = updatedRows.reduce((acc, row) => acc + row.deposit, 0);
-        setTotalDeposit(updatedDeposit);
-    
-        
         setSelectedProduct(selectedOptions);
     };
 
@@ -223,20 +270,12 @@ const CreateSalesOrder = () => {
         setTotalAmount(total);
     };
 
-    const updateDeposit = () => {
-        setDepositRows(currentRows => {
-            const totalDeposit = currentRows.reduce((acc, row) => acc + (parseFloat(row.deposit) || 0), 0);
-            setTotalDeposit(totalDeposit); 
-            return currentRows;
-        });
-    };
-
     const updateRowQuantity = (index, quantity) => {
         const updatedRows = [...productRows];
         updatedRows[index].quantity = parseFloat(quantity) || 0;
         updatedRows[index].totalPrice = updatedRows[index].quantity * updatedRows[index].price;
         setProductRows(updatedRows);
-        updateTotals(); 
+        updateTotals();
     };
 
     const updateRowPrice = (index, price) => {
@@ -244,23 +283,25 @@ const CreateSalesOrder = () => {
         updatedRows[index].price = parseFloat(price) || 0;
         updatedRows[index].totalPrice = updatedRows[index].quantity * updatedRows[index].price;
         setProductRows(updatedRows);
-        updateTotals(); 
+        updateTotals();
     };
 
     const updateRowDeposit = (index, deposit) => {
-        setDepositRows(currentRows => {
-            const updatedRows = [...currentRows];
-            if (!updatedRows[index]) {
-                updatedRows[index] = { deposit: 0, totalDeposit: 0 };
-            }
-            updatedRows[index].deposit = parseFloat(deposit) || 0;
-            return updatedRows;
-        });
+        const updatedRows = [...productRows];
+        updatedRows[index].deposit = parseFloat(deposit) || 0; 
+        setProductRows(updatedRows); 
+
         updateDeposit(); 
+    };
+    
+    const updateDeposit = () => {
+        const totalDeposit = productRows.reduce((acc, row) => acc + (parseFloat(row.deposit) || 0), 0);
+
+        setTotalDeposit(totalDeposit);
     };
 
     const handleCurrencyChange = (selectedOption) => {
-        setCurrency(selectedOption || {}); 
+        setCurrency(selectedOption || {});
     };
 
     const handlePaymentMethodChange = (selectedOption) => {
@@ -310,25 +351,28 @@ const CreateSalesOrder = () => {
         label: item.Name,
     }));
 
-    const createSalesOrder = async () => {
+    const createInvoice = async () => {
+
         if (!selectedBusiness || !selectedCustomer || !currency || !selectedPaymentMethod || !selectedBank || productRows.length === 0) {
             triggerToast("Please select all required fields before submitting.", "danger");
-            return; 
+            return;
         }
 
-        const salesTotal = totalAmount;
-        const salesDeposit = totalDeposit;
-        const salesData = {
-            salesOrder: salesOrderNumber,
+        const invoiceTotal = totalAmount;
+        const invoiceDeposit = totalDeposit;
+        const salesOrder = selectedSalesOrder?.label;
+        const invoiceData = {
+            InvoiceNumber: invoiceNumber,
             AdminId: localStorage.getItem("adminId"),
             BusinessID: selectedBusiness?.value,
             Customer: selectedCustomer?.Customer.Id,
+            SO: salesOrder,
             PaymentMethod: selectedPaymentMethod?.value,
             ReceivingAccount: selectedBank?.value,
-            TotalPrice: salesTotal,
-            TotalDeposit: salesDeposit,
+            TotalPrice: invoiceTotal,
+            TotalDeposit: invoiceDeposit,
             Currency: currency?.value,
-            OrderDate: soDate,
+            InvoiceDate: invoiceDate,
             Remark: remark,
             Items: productRows.map((row) => ({
                 ProductID: row.id,
@@ -338,26 +382,26 @@ const CreateSalesOrder = () => {
                 Price: row.price,
             })),
         };
-    
+
         try {
-            const response = await fetch(`${baseUrl}/api/bizsalesorder/register`, {
+            const response = await fetch(`${baseUrl}/api/customerinvoice/register`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(salesData),
+                body: JSON.stringify(invoiceData),
             });
-    
+
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.message || "An error occurred while submitting the sales order.");
             }
-    
+
             triggerToast("Sales Order Created Successfully!", "success");
             localStorage.setItem("selectedBusiness", selectedBusiness?.value || "");
             setTimeout(() => {
                 window.location.reload();
-            }, 2000);
+            }, 1000);
         } catch (error) {
             console.log('error', error)
         }
@@ -370,7 +414,7 @@ const CreateSalesOrder = () => {
         setSelectedBank("");
         setSelectedPaymentMethod(null);
         setCurrency("");
-        setSoDate(getCurrentDate());
+        setInvoiceDate(getCurrentDate());
         setPaid("");
         setRemark("");
         setProductRows([]);
@@ -392,13 +436,13 @@ const CreateSalesOrder = () => {
         document.body.innerHTML = originalContent;
 
     };
-    
+
 
 
     return (
         <div>
-            <Seo title={"Sales Order"} />
-            <Pageheader title="Sales Order" heading="Create Sales Order" active="Create Sales Order" />
+            <Seo title={"Create Invoice"} />
+            <Pageheader title="Create Invoice" heading="Invoice" active="Create Invoice" />
 
             {/* <!-- row --> */}
             <Row className="row-sm">
@@ -434,6 +478,17 @@ const CreateSalesOrder = () => {
                                         />
                                         <Button variant='' className="btn btn-primary" type="button" onClick={handleShowCustomerModal}>Create Customer</Button>
                                     </InputGroup>
+                                </FormGroup>
+                                <FormGroup className="form-group mt-2">
+                                    <Form.Label className="form-label">Sales Order</Form.Label>
+                                    <Select
+                                        classNamePrefix="Select2"
+                                        options={salesOrderList} // Use the fetched sales orders
+                                        onChange={handleSalesOrderSelect}
+                                        value={selectedSalesOrder} // Set the selected value
+                                        placeholder="Select Sales Order"
+                                        isClearable={true}
+                                    />
                                 </FormGroup>
                                 <FormGroup className="form-group mt-2">
                                     <Form.Label className="form-label">Product</Form.Label>
@@ -506,8 +561,8 @@ const CreateSalesOrder = () => {
                                     <Form.Control
                                         type="date"
                                         id="input-date"
-                                        value={soDate}
-                                        onChange={(e) => setSoDate(e.target.value)}
+                                        value={invoiceDate}
+                                        onChange={(e) => setInvoiceDate(e.target.value)}
                                     />
                                 </FormGroup>
 
@@ -523,8 +578,8 @@ const CreateSalesOrder = () => {
                             </Card.Body>
 
                             <div className="d-flex justify-content-between py-2 px-3">
-                                <button className="btn btn-primary" type="submit" onClick={createSalesOrder}>Create Sales Order</button>
-                                <Button onClick={handlePrint} className="btn btn-warning">Print Sales Order</Button>
+                                <button className="btn btn-primary" type="submit" onClick={createInvoice} >Create Invoice</button>
+                                <Button onClick={handlePrint} className="btn btn-warning" >Print Invoice</Button>
                                 <button className="btn btn-danger" type="button" onClick={resetForm}>Clear All Items</button>
                             </div>
                         </Card>
@@ -534,18 +589,18 @@ const CreateSalesOrder = () => {
                 <Col xl={6} lg={4} md={12}>
                     <Card ref={previewRef}>
                         <Card.Header>
-                            <h3 className="card-title">Sales Order Preview</h3>
+                            <h3 className="card-title">Invoice Preview</h3>
                         </Card.Header>
                         <Card.Body>
                             <div className="invoice-preview">
-                                <h4>Sales Order <span>{salesOrderNumber}</span></h4>
+                                <h4>Invoice <span>{invoiceNumber}</span></h4>
 
                                 <div>
                                     <h3>{selectedBusiness.label}</h3>
                                 </div>
 
                                 <div>
-                                    <h5>{soDate}</h5>
+                                    <h5>{invoiceDate}</h5>
                                 </div>
                                 <h4>BILL TO</h4>
                                 <div>
@@ -568,7 +623,7 @@ const CreateSalesOrder = () => {
 
 
                                 <div>
-                                    <SalesOrderTable
+                                    <InvoiceTable
                                         productRows={productRows}
                                         updateRowQuantity={updateRowQuantity}
                                         updateRowPrice={updateRowPrice}
@@ -626,6 +681,6 @@ const CreateSalesOrder = () => {
     );
 };
 
-CreateSalesOrder.layout = "Contentlayout";
+CreateInvoice.layout = "Contentlayout";
 
-export default CreateSalesOrder;
+export default CreateInvoice;

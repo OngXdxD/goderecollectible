@@ -74,14 +74,14 @@ export const MENUITEMS = [
 		title: "Invoice",
 		children: [
 			{
-				path: "/components/dashboards/dashboard10",
+				path: "/components/invoice/createinvoice",
 				type: "link",
 				active: false,
 				selected: false,
 				title: "Create Invoice",
 			},
 			{
-				path: "/components/dashboards/dashboard10",
+				path: "/components/invoice/invoicemanagement",
 				type: "link",
 				active: false,
 				selected: false,

@@ -11,6 +11,7 @@ import PurchaseOrderProductTable from "../tables/createPurchaseOrderTable";
 import CreateProductModal from "../modals/createProductModal";
 import CreateSupplierModal from "../modals/createSupplierModal";
 import CreatePaymentModal from "../modals/createPaymentModal";
+import useToast from "../toast/toastContext";
 
 const CreatePurchaseOrder = () => {
 
@@ -39,6 +40,7 @@ const CreatePurchaseOrder = () => {
     const [price, setPrice] = useState(0);
     const [totalAmount, setTotalAmount] = useState(0);
     const [preOrder, setPreOrder] = useState("on");
+    const { triggerToast } = useToast();
 
     // Modal state
     const [showSupplierModal, setShowSupplierModal] = useState(false);

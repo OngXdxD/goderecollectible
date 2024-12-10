@@ -7,18 +7,18 @@ import Pageheader from "../../../shared/layout-components/pageheader/pageheader"
 import { baseUrl } from '../../api/config';
 import useFetchAndCache from '../../../shared/hook/useFetchAndCache';
 import { Toast, ToastContainer } from "react-bootstrap";
-import SalesOrderManagementTable from "../tables/salesOrderManagementTable";
+import InvoiceManagementTable from "../tables/invoiceManagementTable";
 import { WidthNormal } from "@mui/icons-material";
 import CreateProductModal from "../modals/createProductModal";
 import CreateCustomerModal from "../modals/createCustomerModal";
 import CreateBankModal from "../modals/createBankModal";
 import useToast from "../toast/toastContext";
 
-const SalesOrderManagement = () => {
+const InvoiceManagement = () => {
     return (
         <div>
-            <Seo title={"Sales Order Management"} />
-            <Pageheader title="Sales Order Management" heading="Sales Order" active="Sales Order Management" />
+            <Seo title={"Invoice Management"} />
+            <Pageheader title="Invoice Management" heading="Invoice" active="Invoice Management" />
 
             {/* <!-- row --> */}
             <Row className="row-sm">
@@ -26,8 +26,7 @@ const SalesOrderManagement = () => {
                 <Col xl={12} lg={16} md={24}>
 
                     <div>
-                        <SalesOrderManagementTable
-                        />
+                        <InvoiceManagementTable/>
                     </div>
                 </Col>
             </Row>
@@ -40,6 +39,6 @@ const SalesOrderManagement = () => {
     );
 };
 
-SalesOrderManagement.layout = "Contentlayout";
+InvoiceManagement.layout = "Contentlayout";
 
-export default SalesOrderManagement;
+export default InvoiceManagement;
