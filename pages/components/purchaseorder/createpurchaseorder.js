@@ -4,6 +4,7 @@ import Seo from "../../../shared/layout-components/seo/seo";
 const Select = dynamic(() => import("react-select"), {ssr : false});
 import { Toast, ToastContainer } from "react-bootstrap";
 import dynamic from "next/dynamic";
+import useToast from "../toast/toastContext";
 import Pageheader from "../../../shared/layout-components/pageheader/pageheader";
 import { baseUrl } from '../../api/config'; 
 import useFetchAndCache from '../../../shared/hook/useFetchAndCache';
@@ -20,27 +21,21 @@ const CreatePurchaseOrder = () => {
         return today.toISOString().split('T')[0]; // Format to YYYY-MM-DD
     };
 
+    const { triggerToast } = useToast();
     const [purchaseOrderNumber, setPurchaseOrderNumber] = useState("");
     const [businessList, setBusinessList] = useState([]);
     const [selectedBusiness, setSelectedBusiness] = useState("");
     const [supplierList, setSupplierList] = useState(null);
     const [selectedSupplier, setSelectedSupplier] = useState("");
-    const [newSupplier, setNewSupplier] = useState(null);
     const [productList, setProductList] = useState(null);
-    const [newProduct, setNewProduct] = useState(null);
     const [currency, setCurrency] = useState("");
-    const [country, setCountry] = useState("");
-    const [series, setSeries] = useState("");
-    const [category, setCategory] = useState("");
-    const [brand, setBrand] = useState("");
     const [poDate, setPoDate] = useState(getCurrentDate());;
     const [remark, setRemark] = useState("");
     const [productRows, setProductRows] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState([]);
-    const [price, setPrice] = useState(0);
     const [totalAmount, setTotalAmount] = useState(0);
     const [preOrder, setPreOrder] = useState("on");
-    const { triggerToast } = useToast();
+    const [invoiceData, setInvoiceData] = useState(null);
 
     // Modal state
     const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -56,7 +51,29 @@ const CreatePurchaseOrder = () => {
         setShowPaymentConfirmationModal(false);
     }
     const handleClosePaymentModal = () => setShowPaymentModal(false);
-    const handleShowPaymentConfirmationModal = () => setShowPaymentConfirmationModal(true);
+    const handleShowPaymentConfirmationModal = () => {
+        if (validateFields()) {
+            const data = {
+                PurchaseOrder: purchaseOrderNumber,
+                AdminId: localStorage.getItem("adminId"),
+                Supplier: selectedSupplier?.value,
+                BusinessID: selectedBusiness?.value,
+                Currency: currency?.value,
+                OrderDate: poDate,
+                TotalPrice: totalAmount,
+                PreOrder: preOrder === "on",
+                Remark: remark,
+                Items: productRows.map((row) => ({
+                    ProductID: row.id,
+                    Name: row.name,
+                    Quantity: row.quantity,
+                    Price: row.cost,
+                })),
+            };
+            setInvoiceData(data);
+            setShowPaymentConfirmationModal(true);
+        }
+    };
     const handleClosePaymentConfirmationModal = () => setShowPaymentConfirmationModal(false);
 
     useEffect(() => {
@@ -243,25 +260,6 @@ const CreatePurchaseOrder = () => {
     };
     
     const submitPurchaseOrder = async (paid) => {
-        const invoiceTotal = totalAmount;
-        const invoiceData = {
-            PurchaseOrder: purchaseOrderNumber,
-            AdminId: localStorage.getItem("adminId"),
-            Supplier: selectedSupplier?.value,
-            BusinessID: selectedBusiness?.value,
-            Currency: currency?.value,
-            OrderDate: poDate,
-            TotalPrice: invoiceTotal,
-            PreOrder: preOrder === "on",
-            Remark: remark,
-            Items: productRows.map((row) => ({
-                ProductID: row.id,
-                Name: row.name,
-                Quantity: row.quantity,
-                Price: row.cost,
-            })),
-        };
-    
         try {
             let response;
     
@@ -299,6 +297,23 @@ const CreatePurchaseOrder = () => {
             triggerToast(error.message, "danger");
         }
     };
+
+    const validateFields = () => {
+        const errors = [];
+        if (!purchaseOrderNumber.trim()) errors.push("Purchase Order Number is required.");
+        if (!selectedBusiness) errors.push("Business is required.");
+        if (!selectedSupplier) errors.push("Supplier is required.");
+        if (!poDate.trim()) errors.push("Purchase Order Date is required.");
+        if (!currency) errors.push("Currency is required.");
+        if (!productRows.length) errors.push("At least one product must be selected.");
+        
+        if (errors.length > 0) {
+            triggerToast(errors.join("<br />"), "danger");
+            return false;
+        }
+        return true;
+    };
+    
 
 	return (
 		<div>
@@ -348,9 +363,6 @@ const CreatePurchaseOrder = () => {
                                             value={selectedSupplier}
                                             classNamePrefix="Select2" 
                                             placeholder="Select Supplier"
-                                            isClearable={true}
-                                            isLoading={loading}
-                                            noOptionsMessage={() => "No options available"} 
                                         />
                                         <Button className="btn btn-primary" type="button" onClick={handleShowSupplierModal}>Create Supplier</Button>
                                     </InputGroup>
@@ -377,8 +389,11 @@ const CreatePurchaseOrder = () => {
                                 <FormGroup className="form-group mt-2">
                                     <Form.Label className="form-label">Purchase Currency</Form.Label>
                                     <Select
+                                        name="currency"
+                                        className="basic-multi-select flex-grow-1"
                                         options={currencyOptions}
-                                        value={currency.label}
+                                        value={currency}
+                                        classNamePrefix="Select2" 
                                         onChange={handleCurrencySelect}
                                         placeholder="Select Currency"
                                     />
@@ -498,6 +513,7 @@ const CreatePurchaseOrder = () => {
                 show={showPaymentModal}
                 onClose={handleClosePaymentModal}
                 baseUrl={baseUrl}
+                invoiceData={invoiceData}
             />
 		</div>
 	);

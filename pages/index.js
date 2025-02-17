@@ -7,14 +7,70 @@ import { Alert, Button, Card, Col, Container, Form, Nav, Tab } from "react-boots
 import Link from "next/link";
 import { useEffect } from "react";
 import Seo from "../shared/layout-components/seo/seo";
-import { baseUrl } from './api/config'; 
+import { baseUrl } from '../pages/api/config'; 
 
+
+// const Home = () => {
+// 	const [passwordshow1, setpasswordshow1] = useState(false);
+// 	const [err, setError] = useState("");
+// 	const [data, setData] = useState({
+// 		"email": "adminnextjs@gmail.com",
+// 		"password": "1234567890",
+// 	});
+// 	const { email, password } = data;
+// 	const changeHandler = (e) => {
+// 		setData({ ...data, [e.target.name]: e.target.value });
+// 		setError("");
+// 	};
+// 	const navigate = useRouter();
+// 	const routeChange = () => {
+// 		const path = "/components/dashboards/dashboard1/";
+// 		navigate.push(path);
+// 	};
+
+// 	const Login = async (e) => {
+// 		e.preventDefault();
+	
+// 		try {
+// 			// Make API request for login
+// 			const response = await fetch(`${baseUrl}/api/bizadmin/login`, {
+//                 method: 'POST',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                 },
+//                 email: email,
+// 				password: password
+//             });
+	
+// 			// Check the API response, handle success
+// 			if (response.data && response.data.status === 'success') {
+// 				console.log('Login successful', response.data);
+// 				routeChange();  // Redirect to dashboard
+// 			} else {
+// 				setError('Invalid credentials or something went wrong.');
+// 			}
+// 		} catch (err) {
+// 			// Handle errors from API call
+// 			console.error('Error during login:', err);
+// 			setError('Failed to login. Please try again.');
+// 		}
+// 	};
+	
+// 	useEffect(() => {
+// 		if (document.body) {
+// 			document.querySelector("body").classList.add("ltr", "error-page1", "bg-primary");
+// 		}
+
+// 		return () => {
+// 			document.body.classList.remove("ltr", "error-page1", "bg-primary");
+// 		};
+// 	}, []);
 
 export default function AdminLogin() {
-	const [email, setEmail] = useState('');
-	const [password, setPassword] = useState('');
-	const [rememberMe, setRememberMe] = useState(false);
-	const [errorMessage, setErrorMessage] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
 	useEffect(() => {
 		const rememberedUsername = localStorage.getItem('rememberedUsername');
