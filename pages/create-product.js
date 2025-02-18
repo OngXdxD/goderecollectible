@@ -13,18 +13,35 @@ export default function CreateProduct() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [files, setFiles] = useState([]);
+  const [uploadedMedia, setUploadedMedia] = useState([]);
+  const [seoData, setSeoData] = useState({
+    tags: [],
+    settings: {
+      preventAutoRedirect: false,
+      keywords: []
+    }
+  });
+  const [keywordsInput, setKeywordsInput] = useState('');
   const [productOptions, setProductOptions] = useState([
     {
       name: "Shipping Fees",
-      values: ["Shipping fees excluded contact us for quotation"]
-    },
-    {
-      name: "Payment",
-      values: ["Deposit", "Full Payment"]
+      values: ["Shipping fees excluded contact us for quotation"],
+      combinations: [
+        {
+          options: ["Shipping fees excluded contact us for quotation"],
+          paymentTypes: ["Full Payment"],
+          prices: {
+            fullPayment: "0"
+          }
+        }
+      ]
     }
   ]);
   const [collections, setCollections] = useState([]);
   const [selectedCollections, setSelectedCollections] = useState([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
   const [additionalInfoSections, setAdditionalInfoSections] = useState([
     {
       title: "Shipping Info",
@@ -45,6 +62,7 @@ The shipping fees may vary depends on the country of the receiver.`
       description: ""
     }
   ]);
+  const [allowDeposit, setAllowDeposit] = useState(false);
 
   const ribbonOptions = [
     { value: "Pre-Order", label: "Pre-Order" },
@@ -54,15 +72,19 @@ The shipping fees may vary depends on the country of the receiver.`
 
   const authorization = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDEyNjYyMjUsInVzZXJJZCI6MiwiaWF0IjoxNzM4Njc0MjI1fQ.GtsrP5Mmkc_5Txy2DNN5xILox8WEAHpJIJt9TgntWoc";
 
-  const uploadImage = async (file) => {
+  const uploadImages = async (files) => {
     try {
-      if (!file) {
-        throw new Error('File is required');
+      if (!files || files.length === 0) {
+        throw new Error('No files to upload');
       }
 
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('displayName', file.filename || 'product-image');
+
+      files.forEach(file => {
+        formData.append('files', file);
+      });
+
+      formData.append('displayName', 'product-images');
       formData.append('private', 'false');
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/media`, {
@@ -75,36 +97,130 @@ The shipping fees may vary depends on the country of the receiver.`
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to upload image');
+        throw new Error(error.message || 'Failed to upload images');
       }
 
       const data = await response.json();
-      return data.url;
+      const mediaItems = data.successful || [];
+      console.log(mediaItems);
+
+      return mediaItems.map(item => ({
+        wixMediaId: item.wixMediaId,
+        mediaUrl: item.url
+      }));
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('Error uploading images:', error);
       throw error;
     }
   };
 
-  const handleAddOption = () => {
-    setProductOptions([...productOptions, { name: "", values: [] }]);
+  const handleFileUpdate = async (fileItems) => {
+    setFiles(fileItems);
+    console.log('File Items:', fileItems);
+    
+    if (fileItems.length > 0) {
+      try {
+        const existingUrls = uploadedMedia.map(media => media.file.filename);
+        const newFiles = fileItems.filter(item => !existingUrls.includes(item.filename));
+        console.log('New Files:', newFiles);
+        
+        if (newFiles.length > 0) {
+          const filesToUpload = newFiles.map(item => item.file);
+          console.log('Files to Upload:', filesToUpload);
+          
+          const uploadedFiles = await uploadImages(filesToUpload);
+          console.log('Uploaded Files:', uploadedFiles);
+          
+          const newUploadedMedia = uploadedFiles.map(item => ({
+            wixMediaId: item.wixMediaId
+          }));
+          console.log('New Uploaded Media:', newUploadedMedia);
+          
+          setUploadedMedia(prevMedia => [...prevMedia, ...newUploadedMedia]);
+        }
+      } catch (error) {
+        setError('Failed to upload image(s): ' + error.message);
+      }
+    } else {
+      setUploadedMedia([]);
+    }
+  };
+
+  const generateCombinations = (options) => {
+    const allCombinations = [];
+    const mainPrice = document.getElementById('price')?.value || "0";
+    
+    // Get all values except shipping fees
+    const optionValues = options.map(opt => opt.values);
+    
+    // Generate cartesian product of all values
+    const cartesian = (...arrays) => {
+      return arrays.reduce((acc, array) => {
+        return acc.flatMap(x => array.map(y => [...x, y]));
+      }, [[]]);
+    };
+
+    const combinations = cartesian(...optionValues);
+    
+    // Create combination objects with payment types and prices
+    combinations.forEach(combo => {
+      allCombinations.push({
+        options: combo,
+        paymentTypes: ["Full Payment"],
+        prices: {
+          fullPayment: mainPrice
+        }
+      });
+    });
+
+    return allCombinations;
   };
 
   const handleAddChoice = (optionIndex) => {
     const newOptions = [...productOptions];
-    newOptions[optionIndex].values.push("");
+    const newValue = "";
+    newOptions[optionIndex].values.push(newValue);
+    
+    // Regenerate all combinations
+    const combinations = generateCombinations(newOptions);
+    newOptions[0].combinations = combinations;
+    
     setProductOptions(newOptions);
   };
 
-  const handleChoiceChange = (optionIndex, choiceIndex, value) => {
+  const handleChoiceChange = (optionIndex, valueIndex, value, field) => {
     const newOptions = [...productOptions];
-    newOptions[optionIndex].values[choiceIndex] = value;
+    
+    if (field === 'values') {
+      newOptions[optionIndex].values[valueIndex] = value;
+      // Regenerate combinations when a value changes
+      const combinations = generateCombinations(newOptions);
+      newOptions[0].combinations = combinations;
+    } else if (field === 'price') {
+      const [priceType, combinationIndex] = value.type.split('-');
+      newOptions[0].combinations[combinationIndex].prices[priceType] = value.amount;
+    } else if (field === 'paymentType') {
+      const combo = newOptions[0].combinations[valueIndex];
+      if (value.checked) {
+        combo.paymentTypes.push('Deposit');
+        combo.prices.deposit = combo.prices.fullPayment;
+      } else {
+        combo.paymentTypes = combo.paymentTypes.filter(type => type !== 'Deposit');
+        delete combo.prices.deposit;
+      }
+    }
+    
     setProductOptions(newOptions);
   };
 
   const handleOptionChange = (optionIndex, field, value) => {
     const newOptions = [...productOptions];
     newOptions[optionIndex][field] = value;
+    
+    // Regenerate combinations when option name changes
+    const combinations = generateCombinations(newOptions);
+    newOptions[0].combinations = combinations;
+    
     setProductOptions(newOptions);
   };
 
@@ -113,31 +229,51 @@ The shipping fees may vary depends on the country of the receiver.`
     setProductOptions(newOptions);
   };
 
-  const fetchCollections = async () => {
+  const fetchCollections = async (currentOffset = 0) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/products/collections`, {
-        headers: {
-          'Authorization': `Bearer ${authorization}`
+      setIsLoadingMore(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/products/collections?offset=${currentOffset}`, {
+          headers: {
+            'Authorization': `Bearer ${authorization}`
+          }
         }
-      });
+      );
       
       if (!response.ok) {
         throw new Error('Failed to fetch collections');
       }
 
       const data = await response.json();
+      
       const formattedCollections = data.collections.map(collection => ({
-        value: collection.name,
+        value: collection.id,
         label: collection.name
       }));
-      setCollections(formattedCollections);
+
+      if (currentOffset === 0) {
+        setCollections(formattedCollections);
+      } else {
+        setCollections(prev => [...prev, ...formattedCollections]);
+      }
+
+      setHasMore(data.collections.length > 0);
+      setOffset(currentOffset + data.collections.length);
     } catch (error) {
       console.error('Error fetching collections:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  const handleMenuScrollToBottom = () => {
+    if (!isLoadingMore && hasMore) {
+      fetchCollections(offset);
     }
   };
 
   useEffect(() => {
-    fetchCollections();
+    fetchCollections(0);
   }, []);
 
   const handleInfoSectionChange = (index, field, value) => {
@@ -146,18 +282,26 @@ The shipping fees may vary depends on the country of the receiver.`
     setAdditionalInfoSections(newSections);
   };
 
-  const handleRibbonChange = (e) => {
-    const ribbonValue = e.target.value;
-    
-    // Find matching collection
-    const matchingCollection = collections.find(col => col.value === ribbonValue);
-    
-    if (matchingCollection) {
-      // Add the matching collection to selected collections if not already present
-      if (!selectedCollections.some(col => col.value === matchingCollection.value)) {
-        setSelectedCollections([...selectedCollections, matchingCollection]);
+  const handleDescriptionChange = (e) => {
+    const description = e.target.value;
+    const newSections = [...additionalInfoSections];
+    newSections[1].description = description;
+    setAdditionalInfoSections(newSections);
+  };
+
+  const handleAllowDepositChange = (e) => {
+    setAllowDeposit(e.target.checked);
+    const newOptions = [...productOptions];
+    newOptions[0].combinations.forEach(combo => {
+      if (e.target.checked) {
+        combo.paymentTypes = ["Full Payment", "Deposit"];
+        combo.prices.deposit = combo.prices.fullPayment;
+      } else {
+        combo.paymentTypes = ["Full Payment"];
+        delete combo.prices.deposit;
       }
-    }
+    });
+    setProductOptions(newOptions);
   };
 
   const handleSubmit = async (e) => {
@@ -167,11 +311,7 @@ The shipping fees may vary depends on the country of the receiver.`
     setSuccess(false);
 
     try {
-      let mediaUrl = '';
-      if (files.length > 0) {
-        mediaUrl = await uploadImage(files[0].file);
-      }
-
+      console.log('Uploaded Media before submit:', uploadedMedia);
       const formData = {
         name: e.target.name.value,
         slug: e.target.name.value.toLowerCase().replace(/ /g, '-'),
@@ -179,15 +319,15 @@ The shipping fees may vary depends on the country of the receiver.`
         description: e.target.description.value,
         price: parseFloat(e.target.price.value),
         stock: parseInt(e.target.stock.value) || 0,
-        sku: e.target.sku.value,
         brand: e.target.brand.value,
-        mediaUrl: mediaUrl,
+        media: uploadedMedia.map(media => media.wixMediaId),
         visible: e.target.visible.checked,
         manageVariants: true,
         productOptions: productOptions,
         ribbon: e.target.ribbon.value,
         collections: selectedCollections.map(col => col.value),
-        additionalInfoSections: additionalInfoSections
+        additionalInfoSections: additionalInfoSections,
+        seoData: seoData
       };
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/products`, {
@@ -208,7 +348,16 @@ The shipping fees may vary depends on the country of the receiver.`
       setSuccess(true);
       e.target.reset();
       setFiles([]);
+      setUploadedMedia([]);
       setProductOptions([]);
+      setKeywordsInput('');
+      setSeoData({
+        tags: [],
+        settings: {
+          preventAutoRedirect: false,
+          keywords: []
+        }
+      });
     } catch (err) {
       setError(err.message);
       console.error('Error:', err);
@@ -227,13 +376,14 @@ The shipping fees may vary depends on the country of the receiver.`
             <h2>Images</h2>
             <FilePond
               files={files}
-              onupdatefiles={setFiles}
+              onupdatefiles={handleFileUpdate}
               allowMultiple={true}
-              maxFiles={5}
+              maxFiles={10}
               name="files"
               labelIdle='Drag & Drop your images or <span class="filepond--label-action">Browse</span>'
               className="multiple-filepond"
             />
+            {error && <div className="error-message">{error}</div>}
           </div>
 
           <div className="form-section">
@@ -244,13 +394,13 @@ The shipping fees may vary depends on the country of the receiver.`
             </div>
 
             <div className="form-group">
-              <label htmlFor="sku">SKU</label>
-              <input type="text" id="sku" name="sku" />
-            </div>
-
-            <div className="form-group">
               <label htmlFor="description">Description</label>
-              <textarea id="description" name="description" rows="4" />
+              <textarea 
+                id="description" 
+                name="description" 
+                rows="4"
+                onChange={handleDescriptionChange}
+              />
             </div>
           </div>
 
@@ -311,10 +461,8 @@ The shipping fees may vary depends on the country of the receiver.`
                   id="ribbon" 
                   name="ribbon" 
                   className="form-select"
-                  defaultValue=""
-                  onChange={handleRibbonChange}
+                  defaultValue="Pre-Order"
                 >
-                  <option value="" disabled>Select Status</option>
                   {ribbonOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -324,63 +472,109 @@ The shipping fees may vary depends on the country of the receiver.`
               </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="collection">Collections</label>
-              <Select
-                id="collection"
-                name="collection"
-                value={selectedCollections}
-                onChange={setSelectedCollections}
-                options={collections}
-                isMulti
-                isClearable
-                className="react-select-container"
-                classNamePrefix="react-select"
-                placeholder="Select Collections"
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    minHeight: '46px',
-                    background: '#fff',
-                    borderColor: '#e2e8f0',
-                    '&:hover': {
-                      borderColor: '#4a90e2'
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="collection">Collections</label>
+                <Select
+                  id="collection"
+                  name="collection"
+                  value={selectedCollections}
+                  onChange={setSelectedCollections}
+                  options={collections}
+                  isMulti
+                  isClearable
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  placeholder="Select Collections"
+                  onMenuScrollToBottom={handleMenuScrollToBottom}
+                  isLoading={isLoadingMore}
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      minHeight: '46px',
+                      background: '#fff',
+                      borderColor: '#e2e8f0',
+                      '&:hover': {
+                        borderColor: '#4a90e2'
+                      }
+                    }),
+                    multiValue: (base) => ({
+                      ...base,
+                      backgroundColor: '#EBF5FF',
+                      borderRadius: '4px',
+                      margin: '2px',
+                    }),
+                    multiValueLabel: (base) => ({
+                      ...base,
+                      color: '#2B6CB0',
+                      padding: '2px 6px',
+                    }),
+                    multiValueRemove: (base) => ({
+                      ...base,
+                      color: '#4299E1',
+                      ':hover': {
+                        backgroundColor: '#BEE3F8',
+                        color: '#2C5282'
+                      }
+                    }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isSelected 
+                        ? '#4a90e2' 
+                        : state.isFocused 
+                          ? '#f7fafc'
+                          : undefined,
+                      color: state.isSelected ? '#fff' : '#2d3748',
+                      ':active': {
+                        backgroundColor: '#4a90e2',
+                        color: '#fff'
+                      }
+                    }),
+                    loadingIndicator: (base) => ({
+                      ...base,
+                      color: '#4a90e2'
+                    }),
+                    loadingMessage: (base) => ({
+                      ...base,
+                      color: '#4a5568'
+                    })
+                  }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="seoKeywords">SEO Keywords</label>
+                <input
+                  type="text"
+                  id="seoKeywords"
+                  value={keywordsInput}
+                  onChange={(e) => {
+                    const inputValue = e.target.value;
+                    setKeywordsInput(inputValue);
+                    
+                    const newSeoData = { ...seoData };
+                    newSeoData.settings.keywords = inputValue
+                      .split(',')
+                      .map(keyword => keyword.trim())
+                      .filter(keyword => keyword.length > 0)
+                      .map(term => ({
+                        term,
+                        isMain: true
+                      }));
+                    setSeoData(newSeoData);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
                     }
-                  }),
-                  multiValue: (base) => ({
-                    ...base,
-                    backgroundColor: '#EBF5FF',
-                    borderRadius: '4px',
-                    margin: '2px',
-                  }),
-                  multiValueLabel: (base) => ({
-                    ...base,
-                    color: '#2B6CB0',
-                    padding: '2px 6px',
-                  }),
-                  multiValueRemove: (base) => ({
-                    ...base,
-                    color: '#4299E1',
-                    ':hover': {
-                      backgroundColor: '#BEE3F8',
-                      color: '#2C5282'
-                    }
-                  }),
-                  option: (base, state) => ({
-                    ...base,
-                    backgroundColor: state.isSelected 
-                      ? '#4a90e2' 
-                      : state.isFocused 
-                        ? '#f7fafc'
-                        : undefined,
-                    color: state.isSelected ? '#fff' : '#2d3748',
-                    ':active': {
-                      backgroundColor: '#4a90e2',
-                      color: '#fff'
-                    }
-                  })
-                }}
-              />
+                  }}
+                  className="form-input"
+                  placeholder="Enter keywords separated by commas (e.g., coffee, beans, arabica)"
+                />
+                <small className="form-text text-muted">
+                  Enter keywords separated by commas. These help with SEO optimization.
+                </small>
+              </div>
             </div>
           </div>
 
@@ -414,7 +608,7 @@ The shipping fees may vary depends on the country of the receiver.`
                             type="text"
                             placeholder="Enter option value"
                             value={value}
-                            onChange={(e) => handleChoiceChange(optionIndex, valueIndex, e.target.value)}
+                            onChange={(e) => handleChoiceChange(optionIndex, valueIndex, e.target.value, 'values')}
                             className="table-input"
                           />
                         ))}
@@ -429,23 +623,88 @@ The shipping fees may vary depends on the country of the receiver.`
                         >
                           + Value
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveOption(optionIndex)}
-                          className="btn-danger btn-sm"
-                        >
-                          Remove
-                        </button>
+                        {optionIndex !== 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOption(optionIndex)}
+                            className="btn-danger btn-sm"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            <h3 className="combinations-title">Option Combinations Pricing</h3>
+            <div className="combinations-header">
+              <label className="allow-deposit-toggle">
+                <input
+                  type="checkbox"
+                  checked={allowDeposit}
+                  onChange={handleAllowDepositChange}
+                />
+                <span className="toggle-label">Allow Deposit Payment</span>
+              </label>
+            </div>
+            <div className="combinations-table-wrapper">
+              <table className="combinations-table">
+                <thead>
+                  <tr>
+                    <th>Combination</th>
+                    <th>Deposit Price</th>
+                    <th>Full Payment Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productOptions[0].combinations.map((combo, index) => (
+                    <tr key={index}>
+                      <td className="combination-name">
+                        {combo.options.join(' + ')}
+                      </td>
+                      <td className="price-inputs">
+                        <div className="price-input-wrapper">
+                          <input
+                            type="number"
+                            value={combo.prices.deposit || combo.prices.fullPayment}
+                            onChange={(e) => handleChoiceChange(0, index, {
+                              type: 'deposit-' + index,
+                              amount: e.target.value
+                            }, 'price')}
+                            className="price-input"
+                            min="0"
+                            step="0.01"
+                            disabled={!allowDeposit}
+                          />
+                        </div>
+                      </td>
+                      <td className="price-inputs">
+                        <div className="price-input-wrapper">
+                          <input
+                            type="number"
+                            value={combo.prices.fullPayment}
+                            onChange={(e) => handleChoiceChange(0, index, {
+                              type: 'fullPayment-' + index,
+                              amount: e.target.value
+                            }, 'price')}
+                            className="price-input"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             
             <button
               type="button"
-              onClick={handleAddOption}
+              onClick={() => setProductOptions([...productOptions, { name: "", values: [], combinations: [] }])}
               className="btn-primary"
             >
               + Add New Option
@@ -455,7 +714,7 @@ The shipping fees may vary depends on the country of the receiver.`
           <div className="form-section">
             <div className="form-group checkbox-group">
               <label>
-                <input type="checkbox" name="visible" id="visible" />
+                <input type="checkbox" name="visible" id="visible" defaultChecked={true} />
                 Visible in Store
               </label>
             </div>
@@ -480,7 +739,7 @@ The shipping fees may vary depends on the country of the receiver.`
         }
 
         .create-product-form {
-          max-width: 800px;
+          max-width: 1200px;
           margin: 0 auto;
           background: white;
           padding: 2rem;
@@ -553,78 +812,32 @@ The shipping fees may vary depends on the country of the receiver.`
           padding-right: 2.5rem;
         }
 
-        .option-group {
-          background: white;
-          padding: 1.5rem;
-          border-radius: 8px;
-          margin-bottom: 1.5rem;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-
-        .option-table {
-          width: 100%;
-        }
-
-        .option-row {
-          display: grid;
-          grid-template-columns: minmax(200px, 1fr) 2fr;
-          gap: 2rem;
-          align-items: start;
-        }
-
-        .option-cell {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .option-label {
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: #4a5568;
-          margin-bottom: 0.5rem;
-        }
-
-        .option-name-input {
-          width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #e2e8f0;
-          border-radius: 6px;
-          font-size: 0.95rem;
-          transition: all 0.2s;
-        }
-
-        .option-name-input:focus {
-          border-color: #4299e1;
-          box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
-        }
-
-        .values-stack {
+        .values-group {
           display: flex;
           flex-direction: column;
           gap: 0.75rem;
         }
 
-        .choice-input {
-          width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #e2e8f0;
-          border-radius: 6px;
-          font-size: 0.95rem;
-          background: white;
+        .table-actions {
+          display: flex;
+          gap: 0.5rem;
+          align-items: flex-start;
+        }
+
+        .btn-danger {
+          background: #fef2f2;
+          color: #dc2626;
+          border: 1px solid #fecaca;
+          padding: 0.5rem 1rem;
+          border-radius: 4px;
+          font-weight: 500;
+          cursor: pointer;
           transition: all 0.2s;
         }
 
-        .choice-input:focus {
-          border-color: #4299e1;
-          box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
-        }
-
-        input:disabled {
-          background-color: #f8fafc;
-          color: #718096;
-          cursor: not-allowed;
-          border-color: #edf2f7;
+        .btn-danger:hover {
+          background: #fee2e2;
+          border-color: #fca5a5;
         }
 
         .btn-primary {
@@ -760,34 +973,6 @@ The shipping fees may vary depends on the country of the receiver.`
           font-size: 0.95rem;
         }
 
-        .values-group {
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-        }
-
-        .table-actions {
-          display: flex;
-          gap: 0.5rem;
-          align-items: flex-start;
-        }
-
-        .btn-danger {
-          background: #fef2f2;
-          color: #dc2626;
-          border: 1px solid #fecaca;
-          padding: 0.5rem 1rem;
-          border-radius: 4px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .btn-danger:hover {
-          background: #fee2e2;
-          border-color: #fca5a5;
-        }
-
         @media (max-width: 768px) {
           .create-product-container {
             padding: 1rem;
@@ -854,6 +1039,186 @@ The shipping fees may vary depends on the country of the receiver.`
           background-color: #f8fafc;
           color: #718096;
           cursor: not-allowed;
+        }
+
+        .value-price-group {
+          display: flex;
+          gap: 1rem;
+          align-items: center;
+          margin-bottom: 0.5rem;
+        }
+
+        .price-input {
+          width: 120px;
+          flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+          .value-price-group {
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+
+          .price-input {
+            width: 100%;
+          }
+        }
+
+        .combinations-title {
+          margin-top: 2rem;
+          margin-bottom: 1rem;
+          color: #666;
+          font-size: 1.1rem;
+        }
+
+        .combinations-table-wrapper {
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          margin-bottom: 1.5rem;
+          overflow: hidden;
+        }
+
+        .combinations-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        .combinations-table th {
+          background: #f8fafc;
+          padding: 1rem;
+          font-weight: 600;
+          color: #4a5568;
+          text-align: left;
+          border-bottom: 2px solid #e2e8f0;
+        }
+
+        .combinations-table td {
+          padding: 1rem;
+          border-bottom: 1px solid #e2e8f0;
+          vertical-align: middle;
+        }
+
+        .combination-name {
+          font-weight: 500;
+          color: #2d3748;
+          min-width: 200px;
+        }
+
+        .payment-options {
+          min-width: 150px;
+        }
+
+        .payment-toggle {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          cursor: pointer;
+        }
+
+        .toggle-label {
+          font-size: 0.9rem;
+          color: #4a5568;
+        }
+
+        .price-group {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .price-input-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .price-input-wrapper label {
+          min-width: 100px;
+          color: #4a5568;
+          font-size: 0.9rem;
+        }
+
+        .price-input {
+          width: 120px;
+          padding: 0.5rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          font-size: 0.9rem;
+          transition: all 0.2s;
+        }
+
+        .price-input:focus {
+          border-color: #4a90e2;
+          box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+          outline: none;
+        }
+
+        @media (max-width: 768px) {
+          .combinations-table {
+            display: block;
+            overflow-x: auto;
+          }
+
+          .price-group {
+            min-width: 200px;
+          }
+        }
+
+        .combinations-header {
+          margin-bottom: 1rem;
+          padding: 1rem;
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .allow-deposit-toggle {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          cursor: pointer;
+          user-select: none;
+        }
+
+        .allow-deposit-toggle input[type="checkbox"] {
+          width: 1.2rem;
+          height: 1.2rem;
+          cursor: pointer;
+        }
+
+        .toggle-label {
+          font-size: 1rem;
+          color: #2d3748;
+          font-weight: 500;
+        }
+
+        .price-input:disabled {
+          background-color: #f8fafc;
+          color: #a0aec0;
+          cursor: not-allowed;
+        }
+
+        .price-input-wrapper {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .price-input {
+          width: 120px;
+          padding: 0.5rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          font-size: 0.9rem;
+          text-align: right;
+          transition: all 0.2s;
+        }
+
+        .price-input:focus:not(:disabled) {
+          border-color: #4a90e2;
+          box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+          outline: none;
         }
       `}</style>
 

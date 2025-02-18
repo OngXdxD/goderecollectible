@@ -32,6 +32,7 @@
     "@wix/redirects": "^1.0.70",
     "@wix/sdk": "^1.15.9",
     "@wix/stores": "^1.0.346",
+    "apexcharts": "^4.4.0",
     "chart.js": "^4.4.2",
     "classnames": "^2.5.1",
     "dayjs": "^1.11.11",
