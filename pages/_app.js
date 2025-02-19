@@ -3,7 +3,6 @@ import "../styles/wix/create-product.scss";
 import Contentlayout from "../shared/layout-components/layout/contentlayout";
 import Authenticationlayout from"../shared/layout-components/layout/authentication-layout";
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import { ToastProvider } from "../shared/components/toast/toastContext";
 
 const layouts = {
 	Contentlayout: Contentlayout,
@@ -13,12 +12,10 @@ const layouts = {
 function MyApp({ Component, pageProps }) {
 	const Layout = layouts[Component.layout] || ((pageProps) => <Component>{pageProps}</Component>);
 	return (
-		<ToastProvider>
-			<Layout>
-				<SpeedInsights />
-				<Component {...pageProps} />
-			</Layout>
-		</ToastProvider>
+		<Layout>
+			<SpeedInsights />
+			<Component {...pageProps} />
+		</Layout>
 	);
 }
 

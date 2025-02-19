@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FilePond, registerPlugin } from "react-filepond";
 import FilePondPluginImageExifOrientation from "filepond-plugin-image-exif-orientation";
 import FilePondPluginImagePreview from "filepond-plugin-image-preview";
@@ -64,6 +64,8 @@ The shipping fees may vary depends on the country of the receiver.`
     }
   ]);
   const [allowDeposit, setAllowDeposit] = useState(false);
+  const isUploadingRef = useRef(false);
+  const [isSectionCollapsed, setIsSectionCollapsed] = useState(true);
 
   const ribbonOptions = [
     { value: "Pre-Order", label: "Pre-Order" },
@@ -116,34 +118,60 @@ The shipping fees may vary depends on the country of the receiver.`
   };
 
   const handleFileUpdate = async (fileItems) => {
-    setFiles(fileItems);
     console.log('File Items:', fileItems);
     
-    if (fileItems.length > 0) {
-      try {
-        const existingUrls = uploadedMedia.map(media => media.file.filename);
-        const newFiles = fileItems.filter(item => !existingUrls.includes(item.filename));
-        console.log('New Files:', newFiles);
-        
-        if (newFiles.length > 0) {
-          const filesToUpload = newFiles.map(item => item.file);
-          console.log('Files to Upload:', filesToUpload);
-          
-          const uploadedFiles = await uploadImages(filesToUpload);
-          console.log('Uploaded Files:', uploadedFiles);
-          
-          const newUploadedMedia = uploadedFiles.map(item => ({
-            wixMediaId: item.wixMediaId
-          }));
-          console.log('New Uploaded Media:', newUploadedMedia);
-          
-          setUploadedMedia(prevMedia => [...prevMedia, ...newUploadedMedia]);
-        }
-      } catch (error) {
-        setError('Failed to upload image(s): ' + error.message);
-      }
-    } else {
+    // If already uploading, skip
+    if (isUploadingRef.current) {
+      return;
+    }
+
+    // If there are no files, reset the uploaded media
+    if (!fileItems.length) {
+      setFiles([]);
       setUploadedMedia([]);
+      return;
+    }
+
+    try {
+      isUploadingRef.current = true;
+      // Update files state
+      setFiles(fileItems);
+      
+      // Get filenames of already uploaded media to prevent duplicates
+      const existingFilenames = new Set(uploadedMedia.map(media => media.filename));
+      
+      // Filter out files that have already been uploaded
+      const newFiles = fileItems.filter(item => !existingFilenames.has(item.filename))
+        .map(item => item.file);
+      
+      // Only proceed with upload if there are new files
+      if (newFiles.length > 0) {
+        console.log('Uploading new files:', newFiles);
+        const uploadedFiles = await uploadImages(newFiles);
+        
+        if (uploadedFiles?.length) {
+          const newUploadedMedia = uploadedFiles.map(item => ({
+            wixMediaId: item.wixMediaId,
+            filename: item.filename // Store filename to check for duplicates
+          }));
+          
+          // Update state with new media while preserving existing ones
+          setUploadedMedia(prevMedia => {
+            const updatedMedia = [...prevMedia];
+            newUploadedMedia.forEach(media => {
+              if (!updatedMedia.some(existing => existing.wixMediaId === media.wixMediaId)) {
+                updatedMedia.push(media);
+              }
+            });
+            return updatedMedia;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      setError('Failed to upload image(s): ' + error.message);
+    } finally {
+      isUploadingRef.current = false;
     }
   };
 
@@ -224,6 +252,13 @@ The shipping fees may vary depends on the country of the receiver.`
 
   const handleRemoveOption = (optionIndex) => {
     const newOptions = productOptions.filter((_, index) => index !== optionIndex);
+    
+    // After removing the option, regenerate combinations
+    if (newOptions.length > 0) {
+      const combinations = generateCombinations(newOptions);
+      newOptions[0].combinations = combinations;
+    }
+    
     setProductOptions(newOptions);
   };
 
@@ -267,6 +302,15 @@ The shipping fees may vary depends on the country of the receiver.`
   const handleMenuScrollToBottom = () => {
     if (!isLoadingMore && hasMore) {
       fetchCollections(offset);
+    }
+  };
+
+  // Add new function to handle mobile scroll
+  const handleMenuScroll = ({ target }) => {
+    // Check if we're near the bottom of the menu
+    const { scrollTop, scrollHeight, clientHeight } = target;
+    if (scrollHeight - scrollTop <= clientHeight + 1) {
+      handleMenuScrollToBottom();
     }
   };
 
@@ -435,31 +479,38 @@ The shipping fees may vary depends on the country of the receiver.`
           </div>
 
           <div className="form-section">
-            <h2>Additional Information</h2>
-            {additionalInfoSections.map((section, index) => (
-              <div key={index} className="info-section">
-                <div className="form-group">
-                  <label>Section Title</label>
-                  <input
-                    type="text"
-                    value={section.title}
-                    onChange={(e) => handleInfoSectionChange(index, 'title', e.target.value)}
-                    className="form-input"
-                    disabled={index === 0}
-                  />
+            <div className="section-header" onClick={() => setIsSectionCollapsed(!isSectionCollapsed)}>
+              <h2>Additional Information</h2>
+              <button type="button" className="collapse-button">
+                {isSectionCollapsed ? '+' : '-'}
+              </button>
+            </div>
+            <div className={`section-content ${isSectionCollapsed ? 'collapsed' : ''}`}>
+              {additionalInfoSections.map((section, index) => (
+                <div key={index} className="info-section">
+                  <div className="form-group">
+                    <label>Section Title</label>
+                    <input
+                      type="text"
+                      value={section.title}
+                      onChange={(e) => handleInfoSectionChange(index, 'title', e.target.value)}
+                      className="form-input"
+                      disabled={index === 0}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Description</label>
+                    <textarea
+                      value={section.description}
+                      onChange={(e) => handleInfoSectionChange(index, 'description', e.target.value)}
+                      className="form-textarea"
+                      rows="6"
+                      disabled={index === 0}
+                    />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Description</label>
-                  <textarea
-                    value={section.description}
-                    onChange={(e) => handleInfoSectionChange(index, 'description', e.target.value)}
-                    className="form-textarea"
-                    rows="6"
-                    disabled={index === 0}
-                  />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           <div className="form-section">
@@ -517,6 +568,7 @@ The shipping fees may vary depends on the country of the receiver.`
                   classNamePrefix="react-select"
                   placeholder="Select Collections"
                   onMenuScrollToBottom={handleMenuScrollToBottom}
+                  onMenuScroll={handleMenuScroll}
                   isLoading={isLoadingMore}
                   styles={{
                     control: (base) => ({
@@ -527,6 +579,22 @@ The shipping fees may vary depends on the country of the receiver.`
                       '&:hover': {
                         borderColor: '#4a90e2'
                       }
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      position: 'absolute',
+                      width: '100%',
+                      zIndex: 2,
+                      backgroundColor: '#fff',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      '-webkit-overflow-scrolling': 'touch' // Add smooth scrolling for mobile
+                    }),
+                    menuList: (base) => ({
+                      ...base,
+                      maxHeight: '200px', // Set a fixed height for better mobile scrolling
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      padding: '8px 0'
                     }),
                     multiValue: (base) => ({
                       ...base,
@@ -599,11 +667,7 @@ The shipping fees may vary depends on the country of the receiver.`
                     }
                   }}
                   className="form-input"
-                  placeholder="Enter keywords separated by commas (e.g., coffee, beans, arabica)"
                 />
-                <small className="form-text text-muted">
-                  Enter keywords separated by commas. These help with SEO optimization.
-                </small>
               </div>
             </div>
           </div>
