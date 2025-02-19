@@ -1,4 +1,5 @@
 import "../styles/globals.scss";
+import "../styles/wix/create-product.scss";
 import Contentlayout from "../shared/layout-components/layout/contentlayout";
 import Authenticationlayout from"../shared/layout-components/layout/authentication-layout";
 import { SpeedInsights } from "@vercel/speed-insights/next"
