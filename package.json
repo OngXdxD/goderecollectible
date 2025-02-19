@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3003",
-    "build": "next build 2>&1 | grep -v 'API routes and middleware'",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "sass": "sass ./public/assets/scss:./public/assets/css/",
@@ -37,7 +37,6 @@
     "classnames": "^2.5.1",
     "dayjs": "^1.11.11",
     "dragula": "^3.7.3",
-    "echarts-for-react": "^3.0.2",
     "eslint": "9.5.0",
     "filepond": "^4.32.6",
     "filepond-plugin-image-exif-orientation": "^1.0.11",
