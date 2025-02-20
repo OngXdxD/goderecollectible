@@ -5,6 +5,8 @@ import FilePondPluginImagePreview from "filepond-plugin-image-preview";
 import "filepond/dist/filepond.min.css";
 import "filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css";
 import Select from 'react-select';
+import { components } from 'react-select';
+
 
 registerPlugin(FilePondPluginImagePreview, FilePondPluginImageExifOrientation);
 
@@ -66,6 +68,9 @@ The shipping fees may vary depends on the country of the receiver.`
   const [allowDeposit, setAllowDeposit] = useState(false);
   const isUploadingRef = useRef(false);
   const [isSectionCollapsed, setIsSectionCollapsed] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const observerRef = useRef(null);
+  const loadingRef = useRef(null);
 
   const ribbonOptions = [
     { value: "Pre-Order", label: "Pre-Order" },
@@ -264,6 +269,8 @@ The shipping fees may vary depends on the country of the receiver.`
 
   const fetchCollections = async (currentOffset = 0) => {
     try {
+      if (isLoadingMore) return; // Prevent multiple simultaneous requests
+      
       setIsLoadingMore(true);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/products/collections?offset=${currentOffset}`, {
@@ -304,14 +311,133 @@ The shipping fees may vary depends on the country of the receiver.`
       fetchCollections(offset);
     }
   };
+  
+  // Setup intersection observer when menu opens
+  useEffect(() => {
+    if (isMenuOpen && hasMore) {
+      const options = {
+        root: null,
+        rootMargin: '20px',
+        threshold: 1.0
+      };
 
-  // Add new function to handle mobile scroll
-  const handleMenuScroll = ({ target }) => {
-    // Check if we're near the bottom of the menu
-    const { scrollTop, scrollHeight, clientHeight } = target;
-    if (scrollHeight - scrollTop <= clientHeight + 1) {
-      handleMenuScrollToBottom();
+      const observer = new IntersectionObserver((entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && hasMore && !isLoadingMore) {
+          fetchCollections(offset);
+        }
+      }, options);
+
+      if (loadingRef.current) {
+        observer.observe(loadingRef.current);
+      }
+
+      observerRef.current = observer;
+
+      return () => {
+        if (observerRef.current) {
+          observerRef.current.disconnect();
+        }
+      };
     }
+  }, [isMenuOpen, offset, hasMore, isLoadingMore]);
+
+  // Custom styles for the Select component
+  const customStyles = {
+    control: (base) => ({
+      ...base,
+      minHeight: '46px',
+      background: '#fff',
+      borderColor: '#e2e8f0',
+      '&:hover': {
+        borderColor: '#4a90e2'
+      }
+    }),
+    menu: (base) => ({
+      ...base,
+      position: 'absolute',
+      width: '100%',
+      zIndex: 2,
+      backgroundColor: '#fff',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      '-webkit-overflow-scrolling': 'touch'
+    }),
+    menuList: (base) => ({
+      ...base,
+      maxHeight: '200px',
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      padding: '8px 0',
+      '&::-webkit-scrollbar': {
+        width: '6px'
+      },
+      '&::-webkit-scrollbar-thumb': {
+        backgroundColor: '#cbd5e0',
+        borderRadius: '3px'
+      }
+    }),
+    multiValue: (base) => ({
+      ...base,
+      backgroundColor: '#EBF5FF',
+      borderRadius: '4px',
+      margin: '2px',
+    }),
+    multiValueLabel: (base) => ({
+      ...base,
+      color: '#2B6CB0',
+      padding: '2px 6px',
+    }),
+    multiValueRemove: (base) => ({
+      ...base,
+      color: '#4299E1',
+      ':hover': {
+        backgroundColor: '#BEE3F8',
+        color: '#2C5282'
+      }
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isSelected 
+        ? '#4a90e2' 
+        : state.isFocused 
+          ? '#f7fafc'
+          : undefined,
+      color: state.isSelected ? '#fff' : '#2d3748',
+      ':active': {
+        backgroundColor: '#4a90e2',
+        color: '#fff'
+      }
+    }),
+    loadingIndicator: (base) => ({
+      ...base,
+      color: '#4a90e2'
+    }),
+    loadingMessage: (base) => ({
+      ...base,
+      color: '#455568'
+    })
+  };
+
+  // Custom components for the Select
+  const customComponents = {
+    MenuList: ({ children, ...props }) => (
+      <components.MenuList {...props}>
+        {children}
+        {hasMore && (
+          <div
+            ref={loadingRef}
+            style={{ 
+              textAlign: 'center', 
+              padding: '8px',
+              fontSize: '14px',
+              color: '#718096'
+            }}
+          >
+            {isLoadingMore ? 'Loading more...' : 'Scroll for more'}
+          </div>
+        )}
+      </components.MenuList>
+    )
   };
 
   useEffect(() => {
@@ -351,6 +477,17 @@ The shipping fees may vary depends on the country of the receiver.`
     setSuccess(false);
 
     try {
+      // Validate deposit amounts if deposit is allowed
+      if (allowDeposit) {
+        const hasInvalidDeposit = productOptions[0].combinations.some(combo => 
+          !combo.prices.deposit || parseFloat(combo.prices.deposit) <= 0
+        );
+        
+        if (hasInvalidDeposit) {
+          throw new Error('All deposit amounts must be greater than 0 when deposit payment is enabled');
+        }
+      }
+
       console.log('Uploaded Media before submit:', uploadedMedia);
       
       // Format product options and combinations
@@ -440,6 +577,16 @@ The shipping fees may vary depends on the country of the receiver.`
     }
   };
 
+  // Modify the add option button click handler to check the limit
+  const handleAddOption = () => {
+    if (productOptions.length >= 6) {
+      setError('Maximum 6 product options allowed');
+      return;
+    }
+    setProductOptions([...productOptions, { name: "", values: [], combinations: [] }]);
+    setError(''); // Clear error if successful
+  };
+
   return (
     <div className="create-product-container">
       <div className="create-product-form">
@@ -463,16 +610,23 @@ The shipping fees may vary depends on the country of the receiver.`
           <div className="form-section">
             <h2>Basic Information</h2>
             <div className="form-group">
-              <label htmlFor="name">Name *</label>
-              <input type="text" id="name" name="name" required />
+              <label htmlFor="name">Name * (max 80 characters)</label>
+              <input 
+                type="text" 
+                id="name" 
+                name="name" 
+                required 
+                maxLength={80}
+              />
             </div>
 
             <div className="form-group">
-              <label htmlFor="description">Description</label>
+              <label htmlFor="description">Description (max 8000 characters)</label>
               <textarea 
                 id="description" 
                 name="description" 
                 rows="4"
+                maxLength={8000}
                 onChange={handleDescriptionChange}
               />
             </div>
@@ -568,75 +722,11 @@ The shipping fees may vary depends on the country of the receiver.`
                   classNamePrefix="react-select"
                   placeholder="Select Collections"
                   onMenuScrollToBottom={handleMenuScrollToBottom}
-                  onMenuScroll={handleMenuScroll}
+                  onMenuOpen={() => setIsMenuOpen(true)}
+                  onMenuClose={() => setIsMenuOpen(false)}
                   isLoading={isLoadingMore}
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      minHeight: '46px',
-                      background: '#fff',
-                      borderColor: '#e2e8f0',
-                      '&:hover': {
-                        borderColor: '#4a90e2'
-                      }
-                    }),
-                    menu: (base) => ({
-                      ...base,
-                      position: 'absolute',
-                      width: '100%',
-                      zIndex: 2,
-                      backgroundColor: '#fff',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                      '-webkit-overflow-scrolling': 'touch' // Add smooth scrolling for mobile
-                    }),
-                    menuList: (base) => ({
-                      ...base,
-                      maxHeight: '200px', // Set a fixed height for better mobile scrolling
-                      overflowY: 'auto',
-                      overflowX: 'hidden',
-                      padding: '8px 0'
-                    }),
-                    multiValue: (base) => ({
-                      ...base,
-                      backgroundColor: '#EBF5FF',
-                      borderRadius: '4px',
-                      margin: '2px',
-                    }),
-                    multiValueLabel: (base) => ({
-                      ...base,
-                      color: '#2B6CB0',
-                      padding: '2px 6px',
-                    }),
-                    multiValueRemove: (base) => ({
-                      ...base,
-                      color: '#4299E1',
-                      ':hover': {
-                        backgroundColor: '#BEE3F8',
-                        color: '#2C5282'
-                      }
-                    }),
-                    option: (base, state) => ({
-                      ...base,
-                      backgroundColor: state.isSelected 
-                        ? '#4a90e2' 
-                        : state.isFocused 
-                          ? '#f7fafc'
-                          : undefined,
-                      color: state.isSelected ? '#fff' : '#2d3748',
-                      ':active': {
-                        backgroundColor: '#4a90e2',
-                        color: '#fff'
-                      }
-                    }),
-                    loadingIndicator: (base) => ({
-                      ...base,
-                      color: '#4a90e2'
-                    }),
-                    loadingMessage: (base) => ({
-                      ...base,
-                      color: '#4a5568'
-                    })
-                  }}
+                  styles={customStyles}
+                  components={customComponents}
                 />
               </div>
 
@@ -735,8 +825,9 @@ The shipping fees may vary depends on the country of the receiver.`
 
             <button
               type="button"
-              onClick={() => setProductOptions([...productOptions, { name: "", values: [], combinations: [] }])}
+              onClick={handleAddOption}
               className="btn-primary"
+              disabled={productOptions.length >= 6}
             >
               + Add New Option
             </button>
