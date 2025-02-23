@@ -6,11 +6,14 @@ import "filepond/dist/filepond.min.css";
 import "filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css";
 import Select from 'react-select';
 import { components } from 'react-select';
-
+import Pageheader from "../../../shared/layout-components/pageheader/pageheader";
+import Seo from "../../../shared/layout-components/seo/seo";
+import { Card, Row, Col } from "react-bootstrap";
+import React from "react";
 
 registerPlugin(FilePondPluginImagePreview, FilePondPluginImageExifOrientation);
 
-export default function CreateProduct() {
+const CreateProduct = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -588,337 +591,355 @@ The shipping fees may vary depends on the country of the receiver.`
   };
 
   return (
-    <div className="create-product-container">
-      <div className="create-product-form">
-        <h1>Create New Product</h1>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="form-section">
-            <h2>Images</h2>
-            <FilePond
-              files={files}
-              onupdatefiles={handleFileUpdate}
-              allowMultiple={true}
-              maxFiles={10}
-              name="files"
-              labelIdle='Drag & Drop your images or <span class="filepond--label-action">Browse</span>'
-              className="multiple-filepond"
-            />
-            {error && <div className="error-message">{error}</div>}
-          </div>
-
-          <div className="form-section">
-            <h2>Basic Information</h2>
-            <div className="form-group">
-              <label htmlFor="name">Name * (max 80 characters)</label>
-              <input 
-                type="text" 
-                id="name" 
-                name="name" 
-                required 
-                maxLength={80}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="description">Description (max 8000 characters)</label>
-              <textarea 
-                id="description" 
-                name="description" 
-                rows="4"
-                maxLength={8000}
-                onChange={handleDescriptionChange}
-              />
-            </div>
-          </div>
-
-          <div className="form-section">
-            <div className="section-header" onClick={() => setIsSectionCollapsed(!isSectionCollapsed)}>
-              <h2>Additional Information</h2>
-              <button type="button" className="collapse-button">
-                {isSectionCollapsed ? '+' : '-'}
-              </button>
-            </div>
-            <div className={`section-content ${isSectionCollapsed ? 'collapsed' : ''}`}>
-              {additionalInfoSections.map((section, index) => (
-                <div key={index} className="info-section">
-                  <div className="form-group">
-                    <label>Section Title</label>
-                    <input
-                      type="text"
-                      value={section.title}
-                      onChange={(e) => handleInfoSectionChange(index, 'title', e.target.value)}
-                      className="form-input"
-                      disabled={index === 0}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Description</label>
-                    <textarea
-                      value={section.description}
-                      onChange={(e) => handleInfoSectionChange(index, 'description', e.target.value)}
-                      className="form-textarea"
-                      rows="6"
-                      disabled={index === 0}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="form-section">
-            <h2>Pricing & Inventory</h2>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="price">Price (USD) *</label>
-                <input type="number" id="price" name="price" step="0.01" required />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="stock">Stock</label>
-                <input type="number" id="stock" name="stock" min="0" />
-              </div>
-            </div>
-          </div>
-
-          <div className="form-section">
-            <h2>Product Details</h2>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="brand">Brand</label>
-                <input type="text" id="brand" name="brand" />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="ribbon">Product Status</label>
-                <select 
-                  id="ribbon" 
-                  name="ribbon" 
-                  className="form-select"
-                  defaultValue="Pre-Order"
-                >
-                  {ribbonOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="collection">Collections</label>
-                <Select
-                  id="collection"
-                  name="collection"
-                  value={selectedCollections}
-                  onChange={setSelectedCollections}
-                  options={collections}
-                  isMulti
-                  isClearable
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  placeholder="Select Collections"
-                  onMenuScrollToBottom={handleMenuScrollToBottom}
-                  onMenuOpen={() => setIsMenuOpen(true)}
-                  onMenuClose={() => setIsMenuOpen(false)}
-                  isLoading={isLoadingMore}
-                  styles={customStyles}
-                  components={customComponents}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="seoKeywords">SEO Keywords</label>
-                <input
-                  type="text"
-                  id="seoKeywords"
-                  value={keywordsInput}
-                  onChange={(e) => {
-                    const inputValue = e.target.value;
-                    setKeywordsInput(inputValue);
+    <>
+      <Seo title="Create Product" />
+      <div>
+        <Pageheader title="CREATE PRODUCT" heading="Products" active="Create Product" />
+        <Row>
+          <Col lg={12} md={12} sm={12}>
+            <Card>
+              <Card.Body>
+                <div className="create-product-container">
+                  <div className="create-product-form">
+                    <h1>Create New Product</h1>
                     
-                    const newSeoData = { ...seoData };
-                    newSeoData.settings.keywords = inputValue
-                      .split(',')
-                      .map(keyword => keyword.trim())
-                      .filter(keyword => keyword.length > 0)
-                      .map(term => ({
-                        term,
-                        isMain: true
-                      }));
-                    setSeoData(newSeoData);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                    }
-                  }}
-                  className="form-input"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="form-section">
-            <h2>Product Options</h2>
-            <table className="options-table">
-              <thead>
-                <tr>
-                  <th>Option Name</th>
-                  <th>Values</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {productOptions.map((option, optionIndex) => (
-                  <tr key={optionIndex} className="option-row">
-                    <td>
-                      <input
-                        type="text"
-                        placeholder="Option Name"
-                        value={option.name}
-                        onChange={(e) => handleOptionChange(optionIndex, 'name', e.target.value)}
-                        className="table-input"
-                      />
-                    </td>
-                    <td>
-                      <div className="values-group">
-                        {option.values.map((value, valueIndex) => (
-                          <input
-                            key={valueIndex}
-                            type="text"
-                            placeholder="Enter option value"
-                            value={value}
-                            onChange={(e) => handleChoiceChange(optionIndex, valueIndex, e.target.value, 'values')}
-                            className="table-input"
-                          />
-                        ))}
+                    <form onSubmit={handleSubmit}>
+                      <div className="form-section">
+                        <h2>Images</h2>
+                        <FilePond
+                          files={files}
+                          onupdatefiles={handleFileUpdate}
+                          allowMultiple={true}
+                          maxFiles={10}
+                          name="files"
+                          labelIdle='Drag & Drop your images or <span class="filepond--label-action">Browse</span>'
+                          className="multiple-filepond"
+                        />
+                        {error && <div className="error-message">{error}</div>}
                       </div>
-                    </td>
-                    <td>
-                      <div className="table-actions">
+
+                      <div className="form-section">
+                        <h2>Basic Information</h2>
+                        <div className="form-group">
+                          <label htmlFor="name">Name * (max 80 characters)</label>
+                          <input 
+                            type="text" 
+                            id="name" 
+                            name="name" 
+                            required 
+                            maxLength={80}
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="description">Description (max 8000 characters)</label>
+                          <textarea 
+                            id="description" 
+                            name="description" 
+                            rows="4"
+                            maxLength={8000}
+                            onChange={handleDescriptionChange}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="form-section">
+                        <div className="section-header" onClick={() => setIsSectionCollapsed(!isSectionCollapsed)}>
+                          <h2>Additional Information</h2>
+                          <button type="button" className="collapse-button">
+                            {isSectionCollapsed ? '+' : '-'}
+                          </button>
+                        </div>
+                        <div className={`section-content ${isSectionCollapsed ? 'collapsed' : ''}`}>
+                          {additionalInfoSections.map((section, index) => (
+                            <div key={index} className="info-section">
+                              <div className="form-group">
+                                <label>Section Title</label>
+                                <input
+                                  type="text"
+                                  value={section.title}
+                                  onChange={(e) => handleInfoSectionChange(index, 'title', e.target.value)}
+                                  className="form-input"
+                                  disabled={index === 0}
+                                />
+                              </div>
+                              <div className="form-group">
+                                <label>Description</label>
+                                <textarea
+                                  value={section.description}
+                                  onChange={(e) => handleInfoSectionChange(index, 'description', e.target.value)}
+                                  className="form-textarea"
+                                  rows="6"
+                                  disabled={index === 0}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="form-section">
+                        <h2>Pricing & Inventory</h2>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label htmlFor="price">Price (USD) *</label>
+                            <input type="number" id="price" name="price" step="0.01" required />
+                          </div>
+
+                          <div className="form-group">
+                            <label htmlFor="stock">Stock</label>
+                            <input type="number" id="stock" name="stock" min="0" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="form-section">
+                        <h2>Product Details</h2>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label htmlFor="brand">Brand</label>
+                            <input type="text" id="brand" name="brand" />
+                          </div>
+
+                          <div className="form-group">
+                            <label htmlFor="ribbon">Product Status</label>
+                            <select 
+                              id="ribbon" 
+                              name="ribbon" 
+                              className="form-select"
+                              defaultValue="Pre-Order"
+                            >
+                              {ribbonOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label htmlFor="collection">Collections</label>
+                            <Select
+                              id="collection"
+                              name="collection"
+                              value={selectedCollections}
+                              onChange={setSelectedCollections}
+                              options={collections}
+                              isMulti
+                              isClearable
+                              className="react-select-container"
+                              classNamePrefix="react-select"
+                              placeholder="Select Collections"
+                              onMenuScrollToBottom={handleMenuScrollToBottom}
+                              onMenuOpen={() => setIsMenuOpen(true)}
+                              onMenuClose={() => setIsMenuOpen(false)}
+                              isLoading={isLoadingMore}
+                              styles={customStyles}
+                              components={customComponents}
+                            />
+                          </div>
+
+                          <div className="form-group">
+                            <label htmlFor="seoKeywords">SEO Keywords</label>
+                            <input
+                              type="text"
+                              id="seoKeywords"
+                              value={keywordsInput}
+                              onChange={(e) => {
+                                const inputValue = e.target.value;
+                                setKeywordsInput(inputValue);
+                                
+                                const newSeoData = { ...seoData };
+                                newSeoData.settings.keywords = inputValue
+                                  .split(',')
+                                  .map(keyword => keyword.trim())
+                                  .filter(keyword => keyword.length > 0)
+                                  .map(term => ({
+                                    term,
+                                    isMain: true
+                                  }));
+                                setSeoData(newSeoData);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                }
+                              }}
+                              className="form-input"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="form-section">
+                        <h2>Product Options</h2>
+                        <table className="options-table">
+                          <thead>
+                            <tr>
+                              <th>Option Name</th>
+                              <th>Values</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {productOptions.map((option, optionIndex) => (
+                              <tr key={optionIndex} className="option-row">
+                                <td>
+                                  <input
+                                    type="text"
+                                    placeholder="Option Name"
+                                    value={option.name}
+                                    onChange={(e) => handleOptionChange(optionIndex, 'name', e.target.value)}
+                                    className="table-input"
+                                  />
+                                </td>
+                                <td>
+                                  <div className="values-group">
+                                    {option.values.map((value, valueIndex) => (
+                                      <input
+                                        key={valueIndex}
+                                        type="text"
+                                        placeholder="Enter option value"
+                                        value={value}
+                                        onChange={(e) => handleChoiceChange(optionIndex, valueIndex, e.target.value, 'values')}
+                                        className="table-input"
+                                      />
+                                    ))}
+                                  </div>
+                                </td>
+                                <td>
+                                  <div className="table-actions">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddChoice(optionIndex)}
+                                      className="btn-primary-light btn-sm"
+                                    >
+                                      + Value
+                                    </button>
+                                    {optionIndex !== 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveOption(optionIndex)}
+                                        className="btn-secondary btn-sm"
+                                      >
+                                        Remove
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+
                         <button
                           type="button"
-                          onClick={() => handleAddChoice(optionIndex)}
-                          className="btn-primary-light btn-sm"
+                          onClick={handleAddOption}
+                          className="btn-primary"
+                          disabled={productOptions.length >= 6}
                         >
-                          + Value
+                          + Add New Option
                         </button>
-                        {optionIndex !== 0 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveOption(optionIndex)}
-                            className="btn-danger btn-sm"
-                          >
-                            Remove
-                          </button>
-                        )}
+
+                        <h3 className="combinations-title">Option Combinations Pricing</h3>
+                        <div className="combinations-header">
+                          <label className="allow-deposit-toggle">
+                            <input
+                              type="checkbox"
+                              checked={allowDeposit}
+                              onChange={handleAllowDepositChange}
+                            />
+                            <span className="toggle-label">Allow Deposit Payment</span>
+                          </label>
+                        </div>
+                        <div className="combinations-table-wrapper">
+                          <table className="combinations-table">
+                            <thead>
+                              <tr>
+                                <th>Combination</th>
+                                <th>Deposit Price</th>
+                                <th>Full Payment Price</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {productOptions[0].combinations.map((combo, index) => (
+                                <tr key={index}>
+                                  <td className="combination-name">
+                                    {Object.entries(combo.options).map(([key, value]) => (
+                                      <span key={key}>{key}: {value}<br /></span>
+                                    ))}
+                                  </td>
+                                  <td className="price-inputs">
+                                    <div className="price-input-wrapper">
+                                      <input
+                                        type="number"
+                                        value={combo.prices.deposit || combo.prices.fullPayment}
+                                        onChange={(e) => handleChoiceChange(0, index, {
+                                          type: 'deposit-' + index,
+                                          amount: e.target.value
+                                        }, 'price')}
+                                        className="price-input"
+                                        min="0"
+                                        step="0.01"
+                                        disabled={!allowDeposit}
+                                      />
+                                    </div>
+                                  </td>
+                                  <td className="price-inputs">
+                                    <div className="price-input-wrapper">
+                                      <input
+                                        type="number"
+                                        value={combo.prices.fullPayment}
+                                        onChange={(e) => handleChoiceChange(0, index, {
+                                          type: 'fullPayment-' + index,
+                                          amount: e.target.value
+                                        }, 'price')}
+                                        className="price-input"
+                                        min="0"
+                                        step="0.01"
+                                      />
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        
+                        
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
 
-            <button
-              type="button"
-              onClick={handleAddOption}
-              className="btn-primary"
-              disabled={productOptions.length >= 6}
-            >
-              + Add New Option
-            </button>
-
-            <h3 className="combinations-title">Option Combinations Pricing</h3>
-            <div className="combinations-header">
-              <label className="allow-deposit-toggle">
-                <input
-                  type="checkbox"
-                  checked={allowDeposit}
-                  onChange={handleAllowDepositChange}
-                />
-                <span className="toggle-label">Allow Deposit Payment</span>
-              </label>
-            </div>
-            <div className="combinations-table-wrapper">
-              <table className="combinations-table">
-                <thead>
-                  <tr>
-                    <th>Combination</th>
-                    <th>Deposit Price</th>
-                    <th>Full Payment Price</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productOptions[0].combinations.map((combo, index) => (
-                    <tr key={index}>
-                      <td className="combination-name">
-                        {Object.entries(combo.options).map(([key, value]) => (
-                          <span key={key}>{key}: {value}<br /></span>
-                        ))}
-                      </td>
-                      <td className="price-inputs">
-                        <div className="price-input-wrapper">
-                          <input
-                            type="number"
-                            value={combo.prices.deposit || combo.prices.fullPayment}
-                            onChange={(e) => handleChoiceChange(0, index, {
-                              type: 'deposit-' + index,
-                              amount: e.target.value
-                            }, 'price')}
-                            className="price-input"
-                            min="0"
-                            step="0.01"
-                            disabled={!allowDeposit}
-                          />
+                      <div className="form-section">
+                        <div className="form-group checkbox-group">
+                          <label>
+                            <input type="checkbox" name="visible" id="visible" defaultChecked={true} />
+                            Visible in Store
+                          </label>
                         </div>
-                      </td>
-                      <td className="price-inputs">
-                        <div className="price-input-wrapper">
-                          <input
-                            type="number"
-                            value={combo.prices.fullPayment}
-                            onChange={(e) => handleChoiceChange(0, index, {
-                              type: 'fullPayment-' + index,
-                              amount: e.target.value
-                            }, 'price')}
-                            className="price-input"
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            
-          </div>
+                      </div>
 
-          <div className="form-section">
-            <div className="form-group checkbox-group">
-              <label>
-                <input type="checkbox" name="visible" id="visible" defaultChecked={true} />
-                Visible in Store
-              </label>
-            </div>
-          </div>
+                      <div className="form-actions">
+                        <button type="submit" disabled={loading} className="submit-btn">
+                          {loading ? 'Creating Product...' : 'Create Product'}
+                        </button>
+                      </div>
+                    </form>
 
-          <div className="form-actions">
-            <button type="submit" disabled={loading} className="submit-btn">
-              {loading ? 'Creating Product...' : 'Create Product'}
-            </button>
-          </div>
-        </form>
-
-        {error && <div className="error-message">Error: {error}</div>}
-        {success && <div className="success-message">Product created successfully!</div>}
+                    {error && <div className="error-message">Error: {error}</div>}
+                    {success && <div className="success-message">Product created successfully!</div>}
+                  </div>
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
       </div>
-    </div>
+    </>
   );
-} 
+};
+
+CreateProduct.layout = "Contentlayout";
+
+export default CreateProduct; 
