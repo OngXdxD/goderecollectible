@@ -105,53 +105,6 @@ export const MENUITEMS = [
 		],
 	},
 	{
-		menutitle: "POS",
-	},
-	{
-		type: "sub",
-		active: false,
-		selected: false,
-		title: "Sales Order",
-		children: [
-			{
-				path: "/components/salesorder/createsalesorder",
-				type: "link",
-				active: false,
-				selected: false,
-				title: "Create Sales Order",
-			},
-			{
-				path: "/components/salesorder/salesordermanagement",
-				type: "link",
-				active: false,
-				selected: false,
-				title: "Sales Order Management",
-			},
-		],
-	},
-	{
-		type: "sub",
-		active: false,
-		selected: false,
-		title: "Invoice",
-		children: [
-			{
-				path: "/components/invoice/createinvoice",
-				type: "link",
-				active: false,
-				selected: false,
-				title: "Create Invoice",
-			},
-			{
-				path: "/components/invoice/invoicemanagement",
-				type: "link",
-				active: false,
-				selected: false,
-				title: "Invoice Management",
-			},
-		],
-	},
-	{
 		type: "sub",
 		active: false,
 		selected: false,
@@ -173,7 +126,42 @@ export const MENUITEMS = [
 			},
 		],
 	},
-
+	{
+		menutitle: "Suppliers",
+	},
+	{
+		title: "Suppliers",
+		icon: (
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				className="side-menu__icon"
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+			>
+				<path d="M20 10h-2V7c0-1.103-.897-2-2-2h-6c-1.103 0-2 .897-2 2h-2c0-2.206 1.794-4 4-4h6c2.206 0 4 1.794 4 4v3zm-4 2H4c-1.103 0-2 .897-2 2v7c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2v-7c0-1.103-.897-2-2-2zM4 12h7v2H4v-2zm9 0h7v2h-7v-2zm-9 4h7v2H4v-2zm9 0h7v2h-7v-2zm-9 4h7v2H4v-2zm9 0h7v2h-7v-2z" />
+			</svg>
+		),
+		type: "sub",
+		selected: false,
+		active: false,
+		children: [
+			{
+				path: "/components/supplier",
+				type: "link",
+				active: false,
+				selected: false,
+				title: "View Suppliers",
+			},
+			{
+				path: "/components/supplier/createsupplier",
+				type: "link",
+				active: false,
+				selected: false,
+				title: "Add Supplier",
+			},
+		],
+	},
 	{
 		menutitle: "WEB APPS",
 	},

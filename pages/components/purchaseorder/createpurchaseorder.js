@@ -5,7 +5,46 @@ import { Card, Row, Col, Form, Button, Table, Alert, Modal } from "react-bootstr
 import { fetchWithTokenRefresh } from '../../../shared/utils/auth';
 
 const CreatePurchaseOrder = () => {
+  // Function to generate order number
+  const generateOrderNumber = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `PO-${year}${month}-${random}`;
+  };
+
+  // Function to check if order number exists
+  const checkOrderNumberExists = async (orderNumber) => {
+    try {
+      const response = await fetchWithTokenRefresh(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/purchase-orders/check-number/${orderNumber}`);
+      if (!response.ok) throw new Error('Failed to check order number');
+      const data = await response.json();
+      return data.exists;
+    } catch (err) {
+      console.error('Error checking order number:', err);
+      return false;
+    }
+  };
+
+  // Function to generate unique order number
+  const generateUniqueOrderNumber = async () => {
+    let orderNumber = generateOrderNumber();
+    let exists = await checkOrderNumberExists(orderNumber);
+    
+    // Keep generating until we find a unique number
+    while (exists) {
+      orderNumber = generateOrderNumber();
+      exists = await checkOrderNumberExists(orderNumber);
+    }
+    
+    return orderNumber;
+  };
+
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -22,24 +61,65 @@ const CreatePurchaseOrder = () => {
     images: []
   });
   const [purchaseOrder, setPurchaseOrder] = useState({
-    orderDate: new Date().toISOString().split('T')[0],
-    supplier: '',
-    notes: '',
-    items: []
+    order_number: generateOrderNumber(),
+    order_date: new Date().toISOString().split('T')[0],
+    supplier_id: '',
+    currency: 'CNY',
+    expected_delivery_date: '',
+    remarks: ''
   });
 
-  // Fetch all products
+  // Check if user is logged in
+  useEffect(() => {
+    const checkAuth = () => {
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('access-token');
+        if (!token) {
+          setError('You must be logged in to create purchase orders. Please log in first.');
+        }
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Fetch all products and suppliers
   useEffect(() => {
     fetchProducts();
+    fetchSuppliers();
   }, []);
+
+  useEffect(() => {
+    // Filter products when search term changes or products are loaded
+    if (searchTerm.trim() === '') {
+      setFilteredProducts([]);
+    } else {
+      const term = searchTerm.toLowerCase();
+      const filtered = products.filter(product => 
+        product.name.toLowerCase().includes(term) || 
+        (product.brand && product.brand.toLowerCase().includes(term)) ||
+        (product.category && product.category.toLowerCase().includes(term))
+      );
+      setFilteredProducts(filtered);
+    }
+  }, [searchTerm, products]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
       const response = await fetchWithTokenRefresh(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/all-products`);
-      if (!response.ok) throw new Error('Failed to fetch products');
+      
+      if (response.status === 401) {
+        setError('Authentication error: Please log in to access this feature');
+        return;
+      }
+      
+      if (!response.ok) throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`);
+      
       const data = await response.json();
-      setProducts(data.products || []);
+      // Check if data is an array directly, otherwise use the products property
+      const productsData = Array.isArray(data) ? data : (data.products || []);
+      setProducts(productsData);
     } catch (err) {
       setError('Failed to load products: ' + err.message);
     } finally {
@@ -47,8 +127,36 @@ const CreatePurchaseOrder = () => {
     }
   };
 
+  const fetchSuppliers = async () => {
+    try {
+      setLoading(true);
+      const response = await fetchWithTokenRefresh(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/suppliers`);
+      
+      if (response.status === 401) {
+        setError('Authentication error: Please log in to access this feature');
+        return;
+      }
+      
+      if (!response.ok) throw new Error(`Failed to fetch suppliers: ${response.status} ${response.statusText}`);
+      
+      const data = await response.json();
+      // Check if data is an array directly, otherwise use the suppliers property
+      const suppliersData = Array.isArray(data) ? data : (data.suppliers || []);
+      setSuppliers(suppliersData);
+    } catch (err) {
+      setError('Failed to load suppliers: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAddProduct = (product) => {
-    setSelectedProducts(prev => [...prev, { ...product, quantity: 1, unitPrice: product.local_selling_price }]);
+    setSelectedProducts(prev => [...prev, { 
+      ...product, 
+      quantity: 1, 
+      unit_cost: product.local_selling_price,
+      unit_cost_local: product.local_selling_price
+    }]);
   };
 
   const handleRemoveProduct = (index) => {
@@ -57,13 +165,22 @@ const CreatePurchaseOrder = () => {
 
   const handleQuantityChange = (index, value) => {
     setSelectedProducts(prev => prev.map((item, i) => 
-      i === index ? { ...item, quantity: parseInt(value) || 0 } : item
+      i === index ? { 
+        ...item, 
+        quantity: parseInt(value) || 0,
+        line_total: (parseInt(value) || 0) * item.unit_cost
+      } : item
     ));
   };
 
   const handleUnitPriceChange = (index, value) => {
     setSelectedProducts(prev => prev.map((item, i) => 
-      i === index ? { ...item, unitPrice: parseFloat(value) || 0 } : item
+      i === index ? { 
+        ...item, 
+        unit_cost: parseFloat(value) || 0,
+        unit_cost_local: parseFloat(value) || 0,
+        line_total: item.quantity * (parseFloat(value) || 0)
+      } : item
     ));
   };
 
@@ -88,7 +205,16 @@ const CreatePurchaseOrder = () => {
         })
       });
 
-      if (!response.ok) throw new Error('Failed to create product');
+      if (response.status === 401) {
+        setError('Authentication error: Please log in to create products');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to create product: ${response.status} ${response.statusText}`);
+      }
+      
       const data = await response.json();
       
       // Add the new product to the selected products
@@ -112,33 +238,69 @@ const CreatePurchaseOrder = () => {
     }
   };
 
+  // Update useEffect to generate order number on component mount
+  useEffect(() => {
+    const initializeOrderNumber = async () => {
+      const uniqueOrderNumber = await generateUniqueOrderNumber();
+      setPurchaseOrder(prev => ({ ...prev, order_number: uniqueOrderNumber }));
+    };
+    initializeOrderNumber();
+  }, []);
+
+  // Update handleSubmit to generate new order number after successful submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
+      
+      // Calculate total cost from all items
+      const total_cost = calculateTotal().toFixed(2);
+      
+      // Format items data
+      const items = selectedProducts.map(item => ({
+        product_id: item.id,
+        quantity: item.quantity,
+        unit_cost: item.unit_cost,
+        unit_cost_local: item.unit_cost_local
+      }));
+      
       const response = await fetchWithTokenRefresh(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/purchase-orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...purchaseOrder,
-          items: selectedProducts.map(item => ({
-            productId: item.id,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice
-          }))
+          order_number: purchaseOrder.order_number,
+          supplier_id: purchaseOrder.supplier_id,
+          total_cost: parseFloat(total_cost),
+          currency: purchaseOrder.currency,
+          expected_delivery_date: purchaseOrder.expected_delivery_date ? new Date(purchaseOrder.expected_delivery_date).toISOString() : null,
+          items: items
         })
       });
 
-      if (!response.ok) throw new Error('Failed to create purchase order');
+      if (response.status === 401) {
+        setError('Authentication error: Please log in to create purchase orders');
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to create purchase order: ${response.status} ${response.statusText}`);
+      }
+      
       setSuccess('Purchase order created successfully!');
       setSelectedProducts([]);
+      
+      // Generate new order number for next order
+      const newOrderNumber = await generateUniqueOrderNumber();
       setPurchaseOrder({
-        orderDate: new Date().toISOString().split('T')[0],
-        supplier: '',
-        notes: '',
-        items: []
+        order_number: newOrderNumber,
+        order_date: new Date().toISOString().split('T')[0],
+        supplier_id: '',
+        currency: 'CNY',
+        expected_delivery_date: '',
+        remarks: ''
       });
     } catch (err) {
       setError('Failed to create purchase order: ' + err.message);
@@ -148,7 +310,14 @@ const CreatePurchaseOrder = () => {
   };
 
   const calculateTotal = () => {
-    return selectedProducts.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+    return selectedProducts.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
+  };
+
+  // When opening the modal, reset search
+  const handleOpenProductModal = () => {
+    setSearchTerm('');
+    setFilteredProducts([]);
+    setShowProductModal(true);
   };
 
   return (
@@ -165,45 +334,193 @@ const CreatePurchaseOrder = () => {
                 
                 <Form onSubmit={handleSubmit}>
                   <Row>
-                    <Col md={6}>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Order Number</Form.Label>
+                        <div className="d-flex gap-2">
+                          <Form.Control
+                            type="text"
+                            value={purchaseOrder.order_number}
+                            onChange={(e) => setPurchaseOrder(prev => ({ ...prev, order_number: e.target.value }))}
+                            required
+                            placeholder="e.g. PO-2024-0001"
+                          />
+                          <Button 
+                            variant="outline-secondary" 
+                            onClick={async () => {
+                              const newOrderNumber = await generateUniqueOrderNumber();
+                              setPurchaseOrder(prev => ({ ...prev, order_number: newOrderNumber }));
+                            }}
+                            className="d-flex align-items-center"
+                          >
+                            <svg 
+                              xmlns="http://www.w3.org/2000/svg" 
+                              width="16" 
+                              height="16" 
+                              fill="currentColor" 
+                              className="bi bi-arrow-clockwise me-1" 
+                              viewBox="0 0 16 16"
+                            >
+                              <path fillRule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                              <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                            </svg>
+                            Regenerate
+                          </Button>
+                        </div>
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
                       <Form.Group className="mb-3">
                         <Form.Label>Order Date</Form.Label>
                         <Form.Control
                           type="date"
-                          value={purchaseOrder.orderDate}
-                          onChange={(e) => setPurchaseOrder(prev => ({ ...prev, orderDate: e.target.value }))}
+                          value={purchaseOrder.order_date}
+                          onChange={(e) => setPurchaseOrder(prev => ({ ...prev, order_date: e.target.value }))}
                           required
                         />
                       </Form.Group>
                     </Col>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Expected Delivery Date</Form.Label>
+                        <Form.Control
+                          type="month"
+                          value={purchaseOrder.expected_delivery_date}
+                          onChange={(e) => setPurchaseOrder(prev => ({ ...prev, expected_delivery_date: e.target.value }))}
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                  
+                  <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label>Supplier</Form.Label>
-                        <Form.Control
-                          type="text"
-                          value={purchaseOrder.supplier}
-                          onChange={(e) => setPurchaseOrder(prev => ({ ...prev, supplier: e.target.value }))}
+                        <Form.Select
+                          value={purchaseOrder.supplier_id}
+                          onChange={(e) => setPurchaseOrder(prev => ({ ...prev, supplier_id: e.target.value }))}
                           required
-                        />
+                        >
+                          <option value="">Select a supplier</option>
+                          {suppliers.map(supplier => (
+                            <option key={supplier.id} value={supplier.id}>
+                              {supplier.name}
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Currency</Form.Label>
+                        <Form.Select
+                          value={purchaseOrder.currency}
+                          onChange={(e) => setPurchaseOrder(prev => ({ ...prev, currency: e.target.value }))}
+                          required
+                        >
+                          <option value="CNY">Chinese Yuan</option>
+                          <option value="SGD">Singapore Dollar</option>
+                          <option value="USD">US Dollar</option>
+                          <option value="MYR">Malaysian Ringgit</option>
+                        </Form.Select>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Add Product</Form.Label>
+                        <div className="position-relative">
+                          <Form.Control
+                            type="text"
+                            placeholder="Search products to add..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="border-end-0"
+                          />
+                          {searchTerm.trim() !== '' && (
+                            <div 
+                              className="position-absolute w-100 mt-1 bg-white border rounded shadow-sm" 
+                              style={{ 
+                                maxHeight: '300px', 
+                                overflowY: 'auto', 
+                                zIndex: 1000 
+                              }}
+                            >
+                              {filteredProducts.length === 0 ? (
+                                <div className="p-2 text-center text-muted">No products found</div>
+                              ) : (
+                                filteredProducts.map(product => (
+                                  <div 
+                                    key={product.id} 
+                                    className="p-2 border-bottom hover-bg-light"
+                                    onClick={() => {
+                                      handleAddProduct(product);
+                                      setSearchTerm('');
+                                    }}
+                                    style={{ cursor: 'pointer' }}
+                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = ''}
+                                  >
+                                    <div className="d-flex justify-content-between">
+                                      <div>
+                                        <div><strong>{product.name}</strong></div>
+                                        <div className="small text-muted">
+                                          {product.brand} | {product.category}
+                                        </div>
+                                      </div>
+                                      <div className="text-end">
+                                        <div>{product.local_selling_price}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>&nbsp;</Form.Label>
+                        <Button 
+                          variant="primary" 
+                          onClick={handleOpenProductModal}
+                          className="d-flex align-items-center w-100"
+                        >
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            width="16" 
+                            height="16" 
+                            fill="currentColor" 
+                            className="bi bi-plus-circle me-1" 
+                            viewBox="0 0 16 16"
+                          >
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                          </svg>
+                          New Product
+                        </Button>
                       </Form.Group>
                     </Col>
                   </Row>
 
                   <div className="mb-4">
                     <div className="d-flex justify-content-between align-items-center mb-3">
-                      <h4>Products</h4>
-                      <Button variant="primary" onClick={() => setShowProductModal(true)}>
-                        Add Product
-                      </Button>
+                      <h4>Selected Products</h4>
                     </div>
 
                     <Table responsive>
                       <thead>
                         <tr>
                           <th>Product</th>
+                          <th>Brand</th>
+                          <th>Category</th>
                           <th>Quantity</th>
-                          <th>Unit Price</th>
-                          <th>Total</th>
+                          <th>Unit Cost</th>
+                          <th>Line Total</th>
                           <th>Action</th>
                         </tr>
                       </thead>
@@ -211,6 +528,8 @@ const CreatePurchaseOrder = () => {
                         {selectedProducts.map((product, index) => (
                           <tr key={index}>
                             <td>{product.name}</td>
+                            <td>{product.brand}</td>
+                            <td>{product.category}</td>
                             <td>
                               <Form.Control
                                 type="number"
@@ -224,14 +543,30 @@ const CreatePurchaseOrder = () => {
                               <Form.Control
                                 type="number"
                                 step="0.01"
-                                value={product.unitPrice}
+                                value={product.unit_cost}
                                 onChange={(e) => handleUnitPriceChange(index, e.target.value)}
                                 style={{ width: '120px' }}
                               />
                             </td>
-                            <td>{(product.quantity * product.unitPrice).toFixed(2)}</td>
+                            <td>{(product.quantity * product.unit_cost).toFixed(2)}</td>
                             <td>
-                              <Button variant="danger" size="sm" onClick={() => handleRemoveProduct(index)}>
+                              <Button 
+                                variant="danger" 
+                                size="sm" 
+                                onClick={() => handleRemoveProduct(index)}
+                                className="d-flex align-items-center"
+                              >
+                                <svg 
+                                  xmlns="http://www.w3.org/2000/svg" 
+                                  width="14" 
+                                  height="14" 
+                                  fill="currentColor" 
+                                  className="bi bi-trash me-1" 
+                                  viewBox="0 0 16 16"
+                                >
+                                  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                  <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                </svg>
                                 Remove
                               </Button>
                             </td>
@@ -240,7 +575,7 @@ const CreatePurchaseOrder = () => {
                       </tbody>
                       <tfoot>
                         <tr>
-                          <td colSpan="3" className="text-end"><strong>Total:</strong></td>
+                          <td colSpan="5" className="text-end"><strong>Total:</strong></td>
                           <td><strong>{calculateTotal().toFixed(2)}</strong></td>
                           <td></td>
                         </tr>
@@ -248,18 +583,47 @@ const CreatePurchaseOrder = () => {
                     </Table>
                   </div>
 
-                  <Form.Group className="mb-3">
-                    <Form.Label>Notes</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      value={purchaseOrder.notes}
-                      onChange={(e) => setPurchaseOrder(prev => ({ ...prev, notes: e.target.value }))}
-                    />
-                  </Form.Group>
+                  <Row>
+                    <Col md={12}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Remarks</Form.Label>
+                        <Form.Control
+                          as="textarea"
+                          rows={2}
+                          value={purchaseOrder.remarks}
+                          onChange={(e) => setPurchaseOrder(prev => ({ ...prev, remarks: e.target.value }))}
+                          placeholder="Add any additional notes or remarks here..."
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
 
-                  <Button type="submit" variant="primary" disabled={loading || selectedProducts.length === 0}>
-                    {loading ? 'Creating...' : 'Create Purchase Order'}
+                  <Button 
+                    type="submit" 
+                    variant="primary" 
+                    disabled={loading || selectedProducts.length === 0}
+                    className="d-flex align-items-center"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <svg 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          width="16" 
+                          height="16" 
+                          fill="currentColor" 
+                          className="bi bi-save me-1" 
+                          viewBox="0 0 16 16"
+                        >
+                          <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+                        </svg>
+                        Create Purchase Order
+                      </>
+                    )}
                   </Button>
                 </Form>
               </Card.Body>
@@ -268,44 +632,12 @@ const CreatePurchaseOrder = () => {
         </Row>
       </div>
 
-      {/* Product Selection Modal */}
+      {/* Product Creation Modal */}
       <Modal show={showProductModal} onHide={() => setShowProductModal(false)} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Add Product</Modal.Title>
+          <Modal.Title>Create New Product</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="mb-4">
-            <h5>Select Existing Product</h5>
-            <Table responsive>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Brand</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.id}>
-                    <td>{product.name}</td>
-                    <td>{product.brand}</td>
-                    <td>{product.category}</td>
-                    <td>{product.local_selling_price}</td>
-                    <td>
-                      <Button variant="primary" size="sm" onClick={() => handleAddProduct(product)}>
-                        Add
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
-
-          <div>
-            <h5>Create New Product</h5>
             <Form onSubmit={handleCreateProduct}>
               <Row>
                 <Col md={6}>
@@ -401,11 +733,35 @@ const CreatePurchaseOrder = () => {
                 />
               </Form.Group>
 
-              <Button type="submit" variant="primary" disabled={loading}>
-                {loading ? 'Creating...' : 'Create Product'}
+            <Button 
+              type="submit" 
+              variant="primary" 
+              disabled={loading}
+              className="d-flex align-items-center"
+            >
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width="16" 
+                    height="16" 
+                    fill="currentColor" 
+                    className="bi bi-plus-circle me-1" 
+                    viewBox="0 0 16 16"
+                  >
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                  </svg>
+                  Create Product
+                </>
+              )}
               </Button>
             </Form>
-          </div>
         </Modal.Body>
       </Modal>
     </>
