@@ -37,6 +37,7 @@ const ViewAllProducts = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
+      setError('');
       
       let url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/all-products?page=${currentPage}&limit=${limit}`;
 
@@ -54,11 +55,12 @@ const ViewAllProducts = () => {
       }
 
       const data = await response.json();
-      setProducts(data.results);
-      setTotalPages(Math.ceil(data.totalResults / limit));
+      setProducts(data || []);
+      setTotalPages(Math.ceil((data.totalResults || 0) / limit));
     } catch (err) {
       console.error('Error fetching products:', err);
       setError(err.message || 'An error occurred while fetching products');
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -175,26 +177,35 @@ const ViewAllProducts = () => {
                         <th>Category</th>
                         <th>Foreign Price</th>
                         <th>Local Price</th>
+                        <th>Shopee</th>
+                        <th>Wix</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {loading ? (
                         <tr>
-                          <td colSpan="7" className="text-center py-4">Loading...</td>
+                          <td colSpan="9" className="text-center py-4">Loading...</td>
                         </tr>
-                      ) : products.length === 0 ? (
+                      ) : !Array.isArray(products) || products.length === 0 ? (
                         <tr>
-                          <td colSpan="7" className="text-center py-4">No products found</td>
+                          <td colSpan="9" className="text-center py-4">No products found</td>
                         </tr>
                       ) : (
                         products.map(product => (
                           <tr key={product.id}>
                             <td>
                               <img
-                                src={product.cover_photo || '/assets/images/no-image.png'}
+                                src={product.images?.cover_photo ? 
+                                  `${process.env.NEXT_PUBLIC_WIX_IMAGE_URL}${product.images.cover_photo}` : 
+                                  '/assets/images/no-image.png'
+                                }
                                 alt={product.name}
                                 style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = '/assets/images/no-image.png';
+                                }}
                               />
                             </td>
                             <td>{product.name}</td>
@@ -202,6 +213,34 @@ const ViewAllProducts = () => {
                             <td>{product.category}</td>
                             <td>{formatPrice(product.foreign_selling_price, product.currency)}</td>
                             <td>{formatPrice(product.local_selling_price, 'MYR')}</td>
+                            <td>
+                              {product.shopee_url ? (
+                                <a 
+                                  href={product.shopee_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="btn btn-link btn-sm p-0"
+                                >
+                                  Click here
+                                </a>
+                              ) : (
+                                <span className="text-muted">-</span>
+                              )}
+                            </td>
+                            <td>
+                              {product.wix_url ? (
+                                <a 
+                                  href={product.wix_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="btn btn-link btn-sm p-0"
+                                >
+                                  Click here
+                                </a>
+                              ) : (
+                                <span className="text-muted">-</span>
+                              )}
+                            </td>
                             <td>
                               <button className="btn btn-primary btn-sm me-2">Edit</button>
                               <button className="btn btn-danger btn-sm">Delete</button>

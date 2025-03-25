@@ -81,7 +81,7 @@ The shipping fees may vary depends on the country of the receiver.`
     { value: "Waiting List", label: "Waiting List" }
   ];
 
-  const authorization = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDEyNjYyMjUsInVzZXJJZCI6MiwiaWF0IjoxNzM4Njc0MjI1fQ.GtsrP5Mmkc_5Txy2DNN5xILox8WEAHpJIJt9TgntWoc";
+  const authorization = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDI0Nzk2NTgsInVzZXJJZCI6Miwicm9sZV9pZCI6MSwiaWF0IjoxNzQyNDc3ODU4fQ.C3BkU8EWHluv8j2_P1Ba0wwGwkl1DHuyKCprYu19bcE";
 
   const uploadImages = async (files) => {
     try {
@@ -525,7 +525,14 @@ The shipping fees may vary depends on the country of the receiver.`
         combinations: formattedCombinations,
         ribbon: e.target.ribbon.value,
         collections: selectedCollections.map(col => col.value),
-        additionalInfoSections: additionalInfoSections,
+        additionalInfoSections: additionalInfoSections.map(section => ({
+          ...section,
+          description: section.description
+              .trim()
+              .split(/\n\s*\n/) // Splitting paragraphs based on double newlines
+              .map(para => `<p>${para.trim()}&nbsp;</p>`) // Wrapping each paragraph in <p> tags
+              .join('\n\n') // Keeping formatting readable
+      })),
         seoData: seoData
       };
 
@@ -573,7 +580,7 @@ The shipping fees may vary depends on the country of the receiver.`
         }
       });
     } catch (err) {
-      setError(err.message);
+      setError('Failed to create product: ' + err.message);
       console.error('Error:', err);
     } finally {
       setLoading(false);

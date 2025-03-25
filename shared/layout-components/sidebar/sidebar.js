@@ -1,7 +1,6 @@
-
 import Link from "next/link";
 import React, { Fragment, useEffect, useRef, useState } from "react";
-import { MENUITEMS } from "../sidebar/nav";
+import { MENUITEMS, filterMenuItemsByRole } from "./nav";
 import { useRouter } from "next/router";
 import { connect } from "react-redux";
 import { ThemeChanger } from "../../redux/action";
@@ -12,7 +11,139 @@ import { basePath } from "../../../next.config";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
 
 const Sidebar = ({ local_varaiable, ThemeChanger }) => {
-	const [menuitems, setMenuitems] = useState(MENUITEMS);
+	const [mainmenu, setMainMenu] = useState(MENUITEMS);
+	const router = useRouter();
+	const [filteredMenu, setFilteredMenu] = useState([]);
+
+	useEffect(() => {
+		// Get user role from cookie
+		const getRoleFromCookie = () => {
+			const cookies = document.cookie.split(';');
+			const roleCookie = cookies.find(cookie => cookie.trim().startsWith('role-id='));
+			return roleCookie ? roleCookie.split('=')[1] : null;
+		};
+
+		const userRole = getRoleFromCookie();
+		const filtered = filterMenuItemsByRole([...MENUITEMS], userRole);
+		setFilteredMenu(filtered);
+	}, []);
+
+	//  Array
+	let arrayLocation = [];
+
+	// Active Main Menu
+	useEffect(() => {
+		filteredMenu.map((mainlevel) => {
+			if (mainlevel.Items) {
+				mainlevel.Items.map((items) => {
+					items.children.map((child) => {
+						if (child.active) {
+							arrayLocation.push(items.title);
+						}
+						return child;
+					});
+					return items;
+				});
+			}
+			return mainlevel;
+		});
+	}, [filteredMenu]);
+
+	//  Active Menu
+	useEffect(() => {
+		filteredMenu.map((items) => {
+			if (items.children) {
+				items.children.map((child) => {
+					if (router.asPath === child.path) {
+						setNavActive(items, child);
+					}
+					if (!child.children) return child;
+					child.children.map((subchild) => {
+						if (router.asPath === subchild.path) {
+							setNavActive(items, subchild);
+						}
+						if (!subchild.children) return subchild;
+						subchild.children.map((subsubchild) => {
+							if (router.asPath === subsubchild.path) {
+								setNavActive(items, subsubchild);
+							}
+							return subsubchild;
+						});
+						return subchild;
+					});
+					return child;
+				});
+			}
+			return items;
+		});
+	}, [router.asPath, filteredMenu]);
+
+	// Function for Active Menu
+	const setNavActive = (item, activeRoute) => {
+		filteredMenu.map((menuItems) => {
+			if (menuItems !== item) {
+				menuItems.active = false;
+				menuItems.selected = false;
+				menuItems.expanded = false;
+			}
+			if (menuItems.children && menuItems.children.includes(activeRoute)) {
+				menuItems.active = true;
+				menuItems.selected = true;
+				menuItems.expanded = true;
+			}
+			if (menuItems.children) {
+				menuItems.children.map((submenuItems) => {
+					if (submenuItems.children && submenuItems.children.includes(activeRoute)) {
+						menuItems.active = true;
+						menuItems.selected = true;
+						menuItems.expanded = true;
+						submenuItems.active = true;
+						submenuItems.selected = true;
+						submenuItems.expanded = true;
+					}
+					return submenuItems;
+				});
+			}
+			return menuItems;
+		});
+		setFilteredMenu([...filteredMenu]);
+	};
+
+	// Function for Toggle Menu
+	function toggletNavActive(item) {
+		if (!item.active) {
+			filteredMenu.map((menuItems) => {
+				if (menuItems !== item) {
+					menuItems.active = false;
+					menuItems.selected = false;
+					menuItems.expanded = false;
+					if (menuItems.children)
+						menuItems.children.map((submenuItems) => {
+							submenuItems.active = false;
+							submenuItems.selected = false;
+							if (submenuItems.children) {
+								submenuItems.children.map((submenuItems1) => {
+									submenuItems1.active = false;
+									submenuItems1.selected = false;
+									return submenuItems1;
+								});
+							}
+							return submenuItems;
+						});
+				}
+				if (menuItems === item) {
+					menuItems.active = !menuItems.active;
+					menuItems.selected = !menuItems.selected;
+					menuItems.expanded = !menuItems.expanded;
+				}
+				return menuItems;
+			});
+		}
+		item.active = !item.active;
+		item.selected = !item.selected;
+		item.expanded = !item.expanded;
+		setFilteredMenu([...filteredMenu]);
+	}
 
 	function closeMenuFn() {
 		const closeMenuRecursively = (items) => {
@@ -22,7 +153,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }) => {
 			});
 		};
 		closeMenuRecursively(MENUITEMS);
-		setMenuitems((arr) => [...arr]);
+		setMainMenu((arr) => [...arr]);
 	}
 
 	useEffect(() => {
@@ -276,7 +407,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }) => {
 	let hasParent = false;
 	let hasParentLevel = 0;
 
-	function setSubmenu(event, targetObject, MENUITEMS = menuitems) {
+	function setSubmenu(event, targetObject, MENUITEMS = mainmenu) {
 		const theme = store.getState();
 		// if ((window.screen.availWidth <= 992 || theme.dataNavStyle != "icon-hover") && (window.screen.availWidth <= 992 || theme.dataNavStyle != "menu-hover")) {
 		if (!event?.ctrlKey) {
@@ -299,7 +430,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }) => {
 		}
 		// }
 
-		setMenuitems((arr) => [...arr]);
+		setMainMenu((arr) => [...arr]);
 	}
 	function getParentObject(obj, childObject) {
 		for (const key in obj) {
@@ -318,7 +449,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }) => {
 		return null; // Object not found
 	}
 	function setMenuAncestorsActive(targetObject) {
-		const parent = getParentObject(menuitems, targetObject);
+		const parent = getParentObject(mainmenu, targetObject);
 		const theme = store.getState();
 		if (parent) {
 			if (hasParentLevel > 2) {
@@ -394,7 +525,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }) => {
 	}, [location]);
 
 	//
-	function toggleSidemenu(event, targetObject, MENUITEMS = menuitems) {
+	function toggleSidemenu(event, targetObject, MENUITEMS = mainmenu) {
 		const theme = store.getState();
 		let element = event.target;
 
@@ -469,7 +600,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }) => {
 				}
 			}
 		}
-		setMenuitems((arr) => [...arr]);
+		setMainMenu((arr) => [...arr]);
 	}
 
 	function setAncestorsActive(MENUITEMS, targetObject) {
@@ -621,7 +752,7 @@ const Sidebar = ({ local_varaiable, ThemeChanger }) => {
 						</div>
 
 						<ul className="main-menu" onClick={() => Sideclick()}>
-							{MENUITEMS.map((levelone, index) => (
+							{mainmenu.map((levelone, index) => (
 								<Fragment key={index}>
 									<li className={`${levelone.menutitle ? "slide__category" : ""} 
 									${levelone.type === "link" ? "slide" : ""} 

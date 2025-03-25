@@ -51,9 +51,18 @@ export default function AdminLogin() {
 
 			const data = await response.json();
 
-			// Store auth data in localStorage
-			localStorage.setItem('refresh-token', data.tokens.refresh.token);
-			localStorage.setItem('access-token', data.tokens.access.token);
+			const expirationDate = new Date();
+			expirationDate.setDate(expirationDate.getDate() + 7);
+
+			            // Store auth data in localStorage
+						localStorage.setItem('refresh-token', data.tokens.refresh.token);
+						localStorage.setItem('access-token', data.tokens.access.token);
+			// Store auth data in cookies
+			document.cookie = `access-token=${data.tokens.access.token}; expires=${expirationDate.toUTCString()}; path=/; secure; samesite=Strict`;
+			document.cookie = `refresh-token=${data.tokens.refresh.token}; expires=${expirationDate.toUTCString()}; path=/; secure; samesite=Strict`;
+			document.cookie = `role-id=${data.user.role_id}; expires=${expirationDate.toUTCString()}; path=/; secure; samesite=Strict`;
+			
+			// Store non-sensitive data in localStorage
 			localStorage.setItem('userId', data.user.id);
 			localStorage.setItem('sessionTime', new Date().getTime());
 
