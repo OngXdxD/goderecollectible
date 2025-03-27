@@ -66,8 +66,12 @@ const CreatePurchaseOrder = () => {
     supplier_id: '',
     currency: 'CNY',
     expected_delivery_date: '',
-    remarks: ''
+    remarks: '',
+    attachment: null
   });
+
+  // Add new state for file preview
+  const [filePreview, setFilePreview] = useState(null);
 
   // Check if user is logged in
   useEffect(() => {
@@ -247,7 +251,34 @@ const CreatePurchaseOrder = () => {
     initializeOrderNumber();
   }, []);
 
-  // Update handleSubmit to generate new order number after successful submission
+  // Add handler for file upload
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Get file extension from original file
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      
+      // Create filename using order number and original extension
+      const filename = `${purchaseOrder.order_number}.${fileExtension}`;
+      
+      setPurchaseOrder(prev => ({ ...prev, attachment: filename }));
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFilePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Add handler for removing attachment
+  const handleRemoveAttachment = () => {
+    setPurchaseOrder(prev => ({ ...prev, attachment: null }));
+    setFilePreview(null);
+  };
+
+  // Update handleSubmit to include attachment
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -256,27 +287,38 @@ const CreatePurchaseOrder = () => {
       // Calculate total cost from all items
       const total_cost = calculateTotal().toFixed(2);
       
-      // Format items data
+      // Format items data exactly as in the sample
       const items = selectedProducts.map(item => ({
-        product_id: item.id,
-        quantity: item.quantity,
-        unit_cost: item.unit_cost,
-        unit_cost_local: item.unit_cost_local
+        "product_id": item.id,
+        "quantity": item.quantity,
+        "unit_cost": item.unit_cost.toString(),
+        "unit_cost_local": item.unit_cost.toString()
       }));
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      
+      // Add all required fields in the exact order as the sample
+      formData.append('order_number', purchaseOrder.order_number);
+      formData.append('order_date', purchaseOrder.order_date);
+      formData.append('supplier_id', purchaseOrder.supplier_id);
+      formData.append('total_cost', total_cost);
+      formData.append('currency', purchaseOrder.currency);
+      formData.append('expected_delivery_date', purchaseOrder.expected_delivery_date ? new Date(purchaseOrder.expected_delivery_date).toISOString() : null);
+      formData.append('remark', purchaseOrder.remarks || '');
+      formData.append('items', JSON.stringify(items));
+      
+      // Add the files if they exist
+      const fileInput = document.querySelector('input[type="file"]');
+      if (fileInput && fileInput.files.length > 0) {
+        Array.from(fileInput.files).forEach(file => {
+          formData.append('attachments', file);
+        });
+      }
       
       const response = await fetchWithTokenRefresh(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/purchase-orders`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          order_number: purchaseOrder.order_number,
-          supplier_id: purchaseOrder.supplier_id,
-          total_cost: parseFloat(total_cost),
-          currency: purchaseOrder.currency,
-          expected_delivery_date: purchaseOrder.expected_delivery_date ? new Date(purchaseOrder.expected_delivery_date).toISOString() : null,
-          items: items
-        })
+        body: formData
       });
 
       if (response.status === 401) {
@@ -300,8 +342,10 @@ const CreatePurchaseOrder = () => {
         supplier_id: '',
         currency: 'CNY',
         expected_delivery_date: '',
-        remarks: ''
+        remarks: '',
+        attachment: null
       });
+      setFilePreview(null);
     } catch (err) {
       setError('Failed to create purchase order: ' + err.message);
     } finally {
@@ -585,15 +629,83 @@ const CreatePurchaseOrder = () => {
 
                   <Row>
                     <Col md={12}>
-                      <Form.Group className="mb-3">
+                  <Form.Group className="mb-3">
                         <Form.Label>Remarks</Form.Label>
-                        <Form.Control
-                          as="textarea"
+                    <Form.Control
+                      as="textarea"
                           rows={2}
                           value={purchaseOrder.remarks}
                           onChange={(e) => setPurchaseOrder(prev => ({ ...prev, remarks: e.target.value }))}
                           placeholder="Add any additional notes or remarks here..."
-                        />
+                    />
+                  </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={12}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Proof of Purchase Order</Form.Label>
+                        <div className="d-flex gap-2 align-items-start">
+                          <div className="flex-grow-1">
+                            <Form.Control
+                              type="file"
+                              onChange={handleFileUpload}
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              className="mb-2"
+                            />
+                            <small className="text-muted">
+                              Accepted formats: PDF, JPG, JPEG, PNG. Maximum file size: 5MB
+                            </small>
+                          </div>
+                          {filePreview && (
+                            <Button 
+                              variant="outline-danger" 
+                              onClick={handleRemoveAttachment}
+                              className="d-flex align-items-center"
+                            >
+                              <svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                width="16" 
+                                height="16" 
+                                fill="currentColor" 
+                                className="bi bi-trash me-1" 
+                                viewBox="0 0 16 16"
+                              >
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                              </svg>
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                        {filePreview && (
+                          <div className="mt-2">
+                            {filePreview.startsWith('data:image') ? (
+                              <img 
+                                src={filePreview} 
+                                alt="Preview" 
+                                style={{ maxWidth: '200px', maxHeight: '200px', objectFit: 'contain' }}
+                                className="border rounded"
+                              />
+                            ) : (
+                              <div className="p-2 border rounded bg-light">
+                                <svg 
+                                  xmlns="http://www.w3.org/2000/svg" 
+                                  width="24" 
+                                  height="24" 
+                                  fill="currentColor" 
+                                  className="bi bi-file-pdf me-2" 
+                                  viewBox="0 0 16 16"
+                                >
+                                  <path d="M5.523 12.424c.14-.082.293-.162.459-.238a4.493 4.493 0 0 1 1.56-.396c.28.04.521.18.642.413.121.232.121.484.121.707v.375a.622.622 0 0 1-.029.133A.076.076 0 0 1 8 14v1a.076.076 0 0 1-.029.133A.622.622 0 0 1 7.875 15.5v-.375c0-.61-.525-1.11-1.174-1.11-.373 0-.745.082-1.122.262a4.943 4.943 0 0 0-.88.45V11.85h1.96c.356 0 .638.139.638.414 0 .31-.319.517-.724.517z"/>
+                                  <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+                                </svg>
+                                PDF Document
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </Form.Group>
                     </Col>
                   </Row>
