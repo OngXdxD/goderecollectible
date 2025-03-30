@@ -10,6 +10,8 @@ import Pageheader from "../../../shared/layout-components/pageheader/pageheader"
 import Seo from "../../../shared/layout-components/seo/seo";
 import { Card, Row, Col } from "react-bootstrap";
 import React from "react";
+import { fetchWithTokenRefresh } from '../../../shared/utils/auth';
+
 
 registerPlugin(FilePondPluginImagePreview, FilePondPluginImageExifOrientation);
 
@@ -81,8 +83,6 @@ The shipping fees may vary depends on the country of the receiver.`
     { value: "Waiting List", label: "Waiting List" }
   ];
 
-  const authorization = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDI0Nzk2NTgsInVzZXJJZCI6Miwicm9sZV9pZCI6MSwiaWF0IjoxNzQyNDc3ODU4fQ.C3BkU8EWHluv8j2_P1Ba0wwGwkl1DHuyKCprYu19bcE";
-
   const uploadImages = async (files) => {
     try {
       if (!files || files.length === 0) {
@@ -98,11 +98,8 @@ The shipping fees may vary depends on the country of the receiver.`
       formData.append('displayName', 'product-images');
       formData.append('private', 'false');
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/media`, {
+      const response = await fetchWithTokenRefresh(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/media`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authorization}`
-        },
         body: formData
       });
 
@@ -275,12 +272,8 @@ The shipping fees may vary depends on the country of the receiver.`
       if (isLoadingMore) return; // Prevent multiple simultaneous requests
       
       setIsLoadingMore(true);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/products/collections?offset=${currentOffset}`, {
-          headers: {
-            'Authorization': `Bearer ${authorization}`
-          }
-        }
+      const response = await fetchWithTokenRefresh(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/products/collections?offset=${currentOffset}`
       );
       
       if (!response.ok) {
@@ -528,19 +521,14 @@ The shipping fees may vary depends on the country of the receiver.`
         additionalInfoSections: additionalInfoSections.map(section => ({
           ...section,
           description: section.description
-              .trim()
-              .split(/\n\s*\n/) // Splitting paragraphs based on double newlines
-              .map(para => `<p>${para.trim()}&nbsp;</p>`) // Wrapping each paragraph in <p> tags
-              .join('\n\n') // Keeping formatting readable
       })),
         seoData: seoData
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/products`, {
+      const response = await fetchWithTokenRefresh(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authorization}`
         },
         body: JSON.stringify(formData)
       });
