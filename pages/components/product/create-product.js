@@ -508,7 +508,7 @@ The shipping fees may vary depends on the country of the receiver.`
         slug: e.target.name.value.toLowerCase().replace(/ /g, '-'),
         productType: "physical",
         description: e.target.description.value,
-        price: parseFloat(e.target.price.value),
+        foreign_selling_price: parseFloat(e.target.price.value),
         stock: parseInt(e.target.stock.value) || 0,
         brand: e.target.brand.value,
         media: uploadedMedia.map(media => media.wixMediaId),
@@ -517,6 +517,7 @@ The shipping fees may vary depends on the country of the receiver.`
         productOptions: formattedOptions,
         combinations: formattedCombinations,
         ribbon: e.target.ribbon.value,
+        platforms: ["wix"],
         collections: selectedCollections.map(col => col.value),
         additionalInfoSections: additionalInfoSections.map(section => ({
           ...section,
@@ -525,7 +526,7 @@ The shipping fees may vary depends on the country of the receiver.`
         seoData: seoData
       };
 
-      const response = await fetchWithTokenRefresh(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/products`, {
+      const response = await fetchWithTokenRefresh(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/all-products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

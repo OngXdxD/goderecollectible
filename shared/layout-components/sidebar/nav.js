@@ -105,42 +105,85 @@ export const MENUITEMS = [
 		],
 	},
 	{
-		type: "sub",
-		active: false,
-		selected: false,
-		title: "Purchase & Stock Inventory",
+		menutitle: "Purchase & Stock",
+		roles: [1, 2, 3],
+	},
+	{
+		title: "Purchase Orders",
 		icon: (
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				className="side-menu__icon"
 				width="24"
 				height="24"
 				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="2"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				className="side-menu__icon"
 			>
-				<path d="M20 7h-4V4c0-1.103-.897-2-2-2h-4c-1.103 0-2 .897-2 2v5H4c-1.103 0-2 .897-2 2v9a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V9c0-1.103-.897-2-2-2zM4 11h4v8H4v-8zm6-1V4h4v15h-4v-9zm10 9h-4V9h4v10z" />
+				<circle cx="9" cy="21" r="1"></circle>
+				<circle cx="20" cy="21" r="1"></circle>
+				<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
 			</svg>
 		),
+		type: "sub",
+		selected: false,
+		active: false,
+		roles: [1, 2, 3],
 		children: [
 			{
+				title: "Create Purchase Order",
 				path: "/components/purchaseorder/createpurchaseorder",
 				type: "link",
 				active: false,
 				selected: false,
-				title: "Create Purchase Order",
+				roles: [1, 2],
 			},
 			{
+				title: "View Purchase Orders",
 				path: "/components/purchaseorder/viewpurchaseorders",
 				type: "link",
 				active: false,
 				selected: false,
-				title: "View Purchase Orders",
+				roles: [1, 2, 3],
 			},
+		],
+	},
+	{
+		title: "Stock Inventory",
+		icon: (
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="2"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				className="side-menu__icon"
+			>
+				<line x1="16.5" y1="9.4" x2="7.55" y2="4.24"></line>
+				<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+				<polyline points="3.29 7 12 12 20.71 7"></polyline>
+				<line x1="12" y1="22" x2="12" y2="12"></line>
+			</svg>
+		),
+		type: "sub",
+		selected: false,
+		active: false,
+		roles: [1, 2, 3],
+		children: [
 			{
-				path: "/components/dashboards/dashboard10",
+				title: "View Stock Balance (WIP)",
+				path: "/components/stockbalance/viewstockbalance",
 				type: "link",
 				active: false,
 				selected: false,
-				title: "View Stock Balance (WIP)",
+				roles: [1, 2, 3],
 			},
 		],
 	},

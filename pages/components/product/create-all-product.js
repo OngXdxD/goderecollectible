@@ -142,7 +142,8 @@ const CreateAllProduct = () => {
         local_selling_price: parseFloat(formData.localPrice),
         wix_url: '', // Left blank as per requirement
         shopee_url: '', // Left blank as per requirement
-        images: uploadedMedia.map(media => media.wixMediaId)
+        media: uploadedMedia.map(media => media.wixMediaId),
+        platforms: [],
       };
 
       console.log('Submitting product data:', productData);

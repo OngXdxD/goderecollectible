@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Pageheader from "../../../shared/layout-components/pageheader/pageheader";
 import Seo from "../../../shared/layout-components/seo/seo";
-import { Card, Row, Col, Table, Form, InputGroup, Pagination, Alert } from "react-bootstrap";
+import { Card, Row, Col, Table, Form, InputGroup, Pagination, Alert, Badge, Button } from "react-bootstrap";
 import { fetchWithTokenRefresh } from '../../../shared/utils/auth';
 
 const ViewAllProducts = () => {
@@ -89,6 +89,37 @@ const ViewAllProducts = () => {
       style: 'currency',
       currency: currency || 'USD'
     }).format(price);
+  };
+
+  const ProductImage = ({ imageUrl, alt }) => {
+    if (!imageUrl) {
+      return (
+        <div className="product-image-placeholder" style={{ width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+        </div>
+      );
+    }
+
+    // Construct the full URL using the Wix image URL and the filename
+    const fullUrl = `${process.env.NEXT_PUBLIC_WIX_IMAGE_URL}${imageUrl}`;
+
+    return (
+      <div className="product-image" style={{ width: '50px', height: '50px', overflow: 'hidden' }}>
+        <img 
+          src={fullUrl} 
+          alt={alt || 'Product image'} 
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={(e) => {
+            e.target.onerror = null; // Prevent infinite loop
+            e.target.src = '/images/placeholder.png'; // Fallback image
+          }}
+        />
+      </div>
+    );
   };
 
   return (
@@ -195,20 +226,18 @@ const ViewAllProducts = () => {
                         products.map(product => (
                           <tr key={product.id}>
                             <td>
-                              <img
-                                src={product.images?.cover_photo ? 
-                                  `${process.env.NEXT_PUBLIC_WIX_IMAGE_URL}${product.images.cover_photo}` : 
-                                  '/assets/images/no-image.png'
-                                }
-                                alt={product.name}
-                                style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.src = '/assets/images/no-image.png';
-                                }}
-                              />
+                              <div className="d-flex align-items-center">
+                                <ProductImage 
+                                  imageUrl={Array.isArray(product.media) && product.media.length > 0 ? product.media[0] : null} 
+                                  alt={product.name}
+                                />
+                              </div>
                             </td>
-                            <td>{product.name}</td>
+                            <td>
+                              <div className="ms-3">
+                                <div className="fw-bold">{product.name}</div>
+                              </div>
+                            </td>
                             <td>{product.brand || '-'}</td>
                             <td>{product.category}</td>
                             <td>{formatPrice(product.foreign_selling_price, product.currency)}</td>
