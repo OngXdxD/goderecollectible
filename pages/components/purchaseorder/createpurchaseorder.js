@@ -3,6 +3,7 @@ import Pageheader from "../../../shared/layout-components/pageheader/pageheader"
 import Seo from "../../../shared/layout-components/seo/seo";
 import { Card, Row, Col, Form, Button, Table, Alert, Modal } from "react-bootstrap";
 import { fetchWithTokenRefresh } from '../../../shared/utils/auth';
+import PaymentModal from '../../../shared/components/PaymentModal';
 
 const CreatePurchaseOrder = () => {
   // Function to generate order number
@@ -72,6 +73,11 @@ const CreatePurchaseOrder = () => {
 
   // Add new state for file preview
   const [filePreview, setFilePreview] = useState(null);
+
+  // Add new state for payment confirmation modal
+  const [showPaymentConfirmationModal, setShowPaymentConfirmationModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [createdOrder, setCreatedOrder] = useState(null);
 
   // Check if user is logged in
   useEffect(() => {
@@ -281,20 +287,10 @@ const CreatePurchaseOrder = () => {
   // Update handleSubmit to include attachment
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      setLoading(true);
-      
-      // Calculate total cost from all items
-      const total_cost = calculateTotal().toFixed(2);
-      
-      // Format items data exactly as in the sample
-      const items = selectedProducts.map(item => ({
-        "product_id": item.id,
-        "quantity": item.quantity,
-        "unit_cost": item.unit_cost.toString(),
-        "unit_cost_local": item.unit_cost.toString()
-      }));
+    setLoading(true);
+    setError('');
 
+    try {
       // Create FormData for file upload
       const formData = new FormData();
       
@@ -302,11 +298,16 @@ const CreatePurchaseOrder = () => {
       formData.append('order_number', purchaseOrder.order_number);
       formData.append('order_date', purchaseOrder.order_date);
       formData.append('supplier_id', purchaseOrder.supplier_id);
-      formData.append('total_cost', total_cost);
+      formData.append('total_cost', calculateTotal().toFixed(2));
       formData.append('currency', purchaseOrder.currency);
       formData.append('expected_delivery_date', purchaseOrder.expected_delivery_date ? new Date(purchaseOrder.expected_delivery_date).toISOString() : null);
       formData.append('remark', purchaseOrder.remarks || '');
-      formData.append('items', JSON.stringify(items));
+      formData.append('items', JSON.stringify(selectedProducts.map(item => ({
+        "product_id": item.id,
+        "quantity": item.quantity,
+        "unit_cost": item.unit_cost.toString(),
+        "unit_cost_local": item.unit_cost.toString()
+      }))));
       
       // Add the files if they exist
       const fileInput = document.querySelector('input[type="file"]');
@@ -321,31 +322,15 @@ const CreatePurchaseOrder = () => {
         body: formData
       });
 
-      if (response.status === 401) {
-        setError('Authentication error: Please log in to create purchase orders');
-        return;
-      }
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `Failed to create purchase order: ${response.status} ${response.statusText}`);
       }
       
-      setSuccess('Purchase order created successfully!');
-      setSelectedProducts([]);
+      const data = await response.json();
+      setCreatedOrder(data);
+      setShowPaymentConfirmationModal(true);
       
-      // Generate new order number for next order
-      const newOrderNumber = await generateUniqueOrderNumber();
-      setPurchaseOrder({
-        order_number: newOrderNumber,
-        order_date: new Date().toISOString().split('T')[0],
-        supplier_id: '',
-        currency: 'CNY',
-        expected_delivery_date: '',
-        remarks: '',
-        attachment: null
-      });
-      setFilePreview(null);
     } catch (err) {
       setError('Failed to create purchase order: ' + err.message);
     } finally {
@@ -362,6 +347,27 @@ const CreatePurchaseOrder = () => {
     setSearchTerm('');
     setFilteredProducts([]);
     setShowProductModal(true);
+  };
+
+  const handlePaymentConfirmation = (hasPaid) => {
+    setShowPaymentConfirmationModal(false);
+    if (hasPaid) {
+      setShowPaymentModal(true);
+    } else {
+      // Reset form and show success message
+      setSelectedProducts([]);
+      setPurchaseOrder({
+        order_number: generateOrderNumber(),
+        order_date: new Date().toISOString().split('T')[0],
+        supplier_id: '',
+        currency: 'CNY',
+        expected_delivery_date: '',
+        remarks: '',
+        attachment: null
+      });
+      setFilePreview(null);
+      setSuccess('Purchase order created successfully!');
+    }
   };
 
   return (
@@ -876,6 +882,50 @@ const CreatePurchaseOrder = () => {
             </Form>
         </Modal.Body>
       </Modal>
+
+      {/* Payment Confirmation Modal */}
+      <Modal
+        show={showPaymentConfirmationModal}
+        onHide={() => setShowPaymentConfirmationModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Payment Confirmation</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>Would you like to add payment details for this purchase order now?</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="success" onClick={() => handlePaymentConfirmation(true)}>
+            Yes, Add Payment
+          </Button>
+          <Button variant="secondary" onClick={() => handlePaymentConfirmation(false)}>
+            No, Continue
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        show={showPaymentModal}
+        onHide={() => setShowPaymentModal(false)}
+        order={createdOrder}
+        onSuccess={() => {
+          setSelectedProducts([]);
+          setPurchaseOrder({
+            order_number: generateOrderNumber(),
+            order_date: new Date().toISOString().split('T')[0],
+            supplier_id: '',
+            currency: 'CNY',
+            expected_delivery_date: '',
+            remarks: '',
+            attachment: null
+          });
+          setFilePreview(null);
+          setSuccess('Purchase order and payment created successfully!');
+        }}
+        onError={(error) => setError(error)}
+      />
     </>
   );
 };

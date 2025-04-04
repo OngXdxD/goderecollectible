@@ -178,8 +178,8 @@ export const MENUITEMS = [
 		roles: [1, 2, 3],
 		children: [
 			{
-				title: "View Stock Balance (WIP)",
-				path: "/components/stockbalance/viewstockbalance",
+				title: "View Stock Balance",
+				path: "/components/inventory/viewinventory",
 				type: "link",
 				active: false,
 				selected: false,

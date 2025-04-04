@@ -5,6 +5,8 @@ import { Card, Row, Col, Table, Button, Form, Alert, Badge, Modal } from "react-
 import { fetchWithTokenRefresh } from '../../../shared/utils/auth';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import PaymentModal from '../../../shared/components/PaymentModal';
+import ReceiveModal from '../../../shared/components/ReceiveModal';
 
 const ViewPurchaseOrders = () => {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -19,13 +21,7 @@ const ViewPurchaseOrders = () => {
   const [attachmentPreview, setAttachmentPreview] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [paymentDetails, setPaymentDetails] = useState({
-    foreign_amount: '',
-    local_amount: '',
-    payment_date: '',
-    attachments: []
-  });
-  const [receiptPreviews, setReceiptPreviews] = useState([]);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
   const router = useRouter();
 
   // Fetch purchase orders
@@ -123,100 +119,14 @@ const ViewPurchaseOrders = () => {
     router.push(`/components/purchaseorder/editpurchaseorder/${order.id}`);
   };
 
-  const handlePayment = (order) => {
-    setSelectedOrder(order);
-    setPaymentDetails({
-      foreign_amount: order.total_cost,
-      local_amount: '',
-      payment_date: new Date().toISOString().split('T')[0],
-      attachments: []
-    });
-    setReceiptPreviews([]);
-    setShowPaymentModal(true);
-  };
-
-  const handleReceiptUpload = (event) => {
-    const files = Array.from(event.target.files);
-    if (files.length > 0) {
-      // Clear previous previews
-      receiptPreviews.forEach(preview => {
-        window.URL.revokeObjectURL(preview);
-      });
-
-      const newPreviews = [];
-      const newAttachments = [];
-
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          newPreviews.push(reader.result);
-          newAttachments.push(file);
-          
-          if (newPreviews.length === files.length) {
-            setReceiptPreviews(newPreviews);
-            setPaymentDetails(prev => ({
-              ...prev,
-              attachments: newAttachments
-            }));
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+  const handleAction = (order) => {
+    if (order.status === 'pending receive') {
+      setSelectedOrder(order);
+      setShowReceiveModal(true);
+    } else {
+      setSelectedOrder(order);
+      setShowPaymentModal(true);
     }
-  };
-
-  const handleRemoveReceipt = (index) => {
-    const newPreviews = [...receiptPreviews];
-    const newAttachments = [...paymentDetails.attachments];
-    
-    window.URL.revokeObjectURL(newPreviews[index]);
-    newPreviews.splice(index, 1);
-    newAttachments.splice(index, 1);
-    
-    setReceiptPreviews(newPreviews);
-    setPaymentDetails(prev => ({
-      ...prev,
-      attachments: newAttachments
-    }));
-  };
-
-  const handleSubmitPayment = async () => {
-    try {
-      const formData = new FormData();
-      formData.append('purchase_order_id', selectedOrder.id);
-      formData.append('foreign_amount', paymentDetails.foreign_amount);
-      formData.append('local_amount', paymentDetails.local_amount);
-      formData.append('payment_date', paymentDetails.payment_date);
-      
-      // Append each attachment
-      paymentDetails.attachments.forEach((file, index) => {
-        formData.append('attachments', file);
-      });
-
-      const response = await fetchWithTokenRefresh(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/purchase-order-payments`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        setShowPaymentModal(false);
-        fetchPurchaseOrders(); // Refresh the list
-      } else {
-        const data = await response.json();
-        setError(data.message || 'Failed to process payment');
-      }
-    } catch (err) {
-      setError('Error processing payment');
-    }
-  };
-
-  const handleClosePaymentModal = () => {
-    setShowPaymentModal(false);
-    receiptPreviews.forEach(preview => {
-      window.URL.revokeObjectURL(preview);
-    });
-    setReceiptPreviews([]);
-    setSelectedOrder(null);
   };
 
   const handleViewAttachment = async (attachment) => {
@@ -391,15 +301,25 @@ const ViewPurchaseOrders = () => {
                           </td>
                           <td>
                             <div className="d-flex gap-2">
+                              {order.status === 'pending receive' ? (
+                                <Button
+                                  variant="success"
+                                  size="sm"
+                                  onClick={() => handleAction(order)}
+                                >
+                                  Receive
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() => handleAction(order)}
+                                >
+                                  Pay
+                                </Button>
+                              )}
                               <Button
-                                variant="outline-primary"
-                                size="sm"
-                                onClick={() => handlePayment(order)}
-                              >
-                                Pay
-                              </Button>
-                              <Button
-                                variant="primary"
+                                variant="info"
                                 size="sm"
                                 onClick={() => handleEdit(order)}
                               >
@@ -424,120 +344,29 @@ const ViewPurchaseOrders = () => {
           </Col>
         </Row>
         
-        <Modal
+        <ReceiveModal
+          show={showReceiveModal}
+          onHide={() => setShowReceiveModal(false)}
+          order={selectedOrder}
+          onSuccess={() => {
+            setShowReceiveModal(false);
+            setSelectedOrder(null);
+            fetchPurchaseOrders(); // Refresh the list
+          }}
+          onError={(error) => setError(error)}
+        />
+
+        <PaymentModal
           show={showPaymentModal}
-          onHide={handleClosePaymentModal}
-          size="lg"
-          centered
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Process Payment</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {selectedOrder && (
-              <Form>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Order Number</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={selectedOrder.order_number}
-                        readOnly
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Foreign Amount ({selectedOrder.currency})</Form.Label>
-                      <Form.Control
-                        type="number"
-                        value={paymentDetails.foreign_amount}
-                        onChange={(e) => setPaymentDetails(prev => ({ ...prev, foreign_amount: e.target.value }))}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Local Amount (MYR)</Form.Label>
-                      <Form.Control
-                        type="number"
-                        value={paymentDetails.local_amount}
-                        onChange={(e) => setPaymentDetails(prev => ({ ...prev, local_amount: e.target.value }))}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Payment Date</Form.Label>
-                      <Form.Control
-                        type="date"
-                        value={paymentDetails.payment_date}
-                        onChange={(e) => setPaymentDetails(prev => ({ ...prev, payment_date: e.target.value }))}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Payment Receipts</Form.Label>
-                  <div className="d-flex gap-2 align-items-center">
-                    <Form.Control
-                      type="file"
-                      onChange={handleReceiptUpload}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      multiple
-                    />
-                  </div>
-                  {receiptPreviews.length > 0 && (
-                    <div className="mt-3">
-                      <div className="d-flex flex-wrap gap-2">
-                        {receiptPreviews.map((preview, index) => (
-                          <div key={index} className="position-relative">
-                            <img
-                              src={preview}
-                              alt={`Receipt ${index + 1}`}
-                              style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                            />
-                            <Button
-                              variant="outline-danger"
-                              size="sm"
-                              className="position-absolute top-0 end-0"
-                              onClick={() => handleRemoveReceipt(index)}
-                            >
-                              ×
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </Form.Group>
-
-                <div className="d-flex justify-content-end gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={handleClosePaymentModal}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onClick={handleSubmitPayment}
-                  >
-                    Submit Payment
-                  </Button>
-                </div>
-              </Form>
-            )}
-          </Modal.Body>
-        </Modal>
+          onHide={() => setShowPaymentModal(false)}
+          order={selectedOrder}
+          onSuccess={() => {
+            setShowPaymentModal(false);
+            setSelectedOrder(null);
+            fetchPurchaseOrders(); // Refresh the list
+          }}
+          onError={(error) => setError(error)}
+        />
 
         <Modal
           show={showAttachmentModal}
