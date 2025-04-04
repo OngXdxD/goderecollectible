@@ -632,7 +632,7 @@ The shipping fees may vary depends on the country of the receiver.`
                           <textarea 
                             id="description" 
                             name="description" 
-                            rows="4"
+                            rows="15"
                             maxLength={8000}
                             onChange={handleDescriptionChange}
                           />
