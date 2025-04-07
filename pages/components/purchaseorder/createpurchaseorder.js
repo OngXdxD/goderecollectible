@@ -4,6 +4,7 @@ import Seo from "../../../shared/layout-components/seo/seo";
 import { Card, Row, Col, Form, Button, Table, Alert, Modal } from "react-bootstrap";
 import { fetchWithTokenRefresh } from '../../../shared/utils/auth';
 import PaymentModal from '../../../shared/components/PaymentModal';
+import ProductModal from '../../../shared/components/ProductModal';
 
 const CreatePurchaseOrder = () => {
   // Function to generate order number
@@ -194,8 +195,7 @@ const CreatePurchaseOrder = () => {
     ));
   };
 
-  const handleCreateProduct = async (e) => {
-    e.preventDefault();
+  const handleCreateProduct = async (productData) => {
     try {
       setLoading(true);
       const response = await fetchWithTokenRefresh(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/all-products`, {
@@ -204,14 +204,14 @@ const CreatePurchaseOrder = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: newProduct.name,
-          brand: newProduct.brand,
-          category: newProduct.category,
-          description: newProduct.description,
-          foreign_selling_price: parseFloat(newProduct.foreignPrice),
-          currency: newProduct.currency,
-          local_selling_price: parseFloat(newProduct.localPrice),
-          images: newProduct.images
+          name: productData.name,
+          brand: productData.brand,
+          category: productData.category,
+          description: productData.description,
+          foreign_selling_price: parseFloat(productData.foreignPrice),
+          currency: productData.currency,
+          local_selling_price: parseFloat(productData.localPrice),
+          images: productData.images
         })
       });
 
@@ -226,20 +226,7 @@ const CreatePurchaseOrder = () => {
       }
       
       const data = await response.json();
-      
-      // Add the new product to the selected products
       handleAddProduct(data);
-      setShowProductModal(false);
-      setNewProduct({
-        name: '',
-        brand: '',
-        category: '',
-        description: '',
-        foreignPrice: '',
-        currency: 'USD',
-        localPrice: '',
-        images: []
-      });
       setSuccess('Product created successfully!');
     } catch (err) {
       setError('Failed to create product: ' + err.message);
@@ -567,7 +554,6 @@ const CreatePurchaseOrder = () => {
                         <tr>
                           <th>Product</th>
                           <th>Brand</th>
-                          <th>Category</th>
                           <th>Quantity</th>
                           <th>Unit Cost</th>
                           <th>Line Total</th>
@@ -579,7 +565,6 @@ const CreatePurchaseOrder = () => {
                           <tr key={index}>
                             <td>{product.name}</td>
                             <td>{product.brand}</td>
-                            <td>{product.category}</td>
                             <td>
                               <Form.Control
                                 type="number"
@@ -750,138 +735,16 @@ const CreatePurchaseOrder = () => {
         </Row>
       </div>
 
-      {/* Product Creation Modal */}
-      <Modal show={showProductModal} onHide={() => setShowProductModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Create New Product</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-            <Form onSubmit={handleCreateProduct}>
-              <Row>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Product Name</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={newProduct.name}
-                      onChange={(e) => setNewProduct(prev => ({ ...prev, name: e.target.value }))}
-                      required
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Brand</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={newProduct.brand}
-                      onChange={(e) => setNewProduct(prev => ({ ...prev, brand: e.target.value }))}
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
-
-              <Row>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Category</Form.Label>
-                    <Form.Select
-                      value={newProduct.category}
-                      onChange={(e) => setNewProduct(prev => ({ ...prev, category: e.target.value }))}
-                      required
-                    >
-                      <option value="">Select a category</option>
-                      <option value="Blind Boxes">Blind Boxes</option>
-                      <option value="Figures">Figures</option>
-                      <option value="GK Resin">GK Resin</option>
-                      <option value="Statues">Statues</option>
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Currency</Form.Label>
-                    <Form.Select
-                      value={newProduct.currency}
-                      onChange={(e) => setNewProduct(prev => ({ ...prev, currency: e.target.value }))}
-                      required
-                    >
-                      <option value="CNY">Chinese Yuan</option>
-                      <option value="SGD">Singapore Dollar</option>
-                      <option value="USD">US Dollar</option>
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-              </Row>
-
-              <Row>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Foreign Price</Form.Label>
-                    <Form.Control
-                      type="number"
-                      step="0.01"
-                      value={newProduct.foreignPrice}
-                      onChange={(e) => setNewProduct(prev => ({ ...prev, foreignPrice: e.target.value }))}
-                      required
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Local Price (MYR)</Form.Label>
-                    <Form.Control
-                      type="number"
-                      step="0.01"
-                      value={newProduct.localPrice}
-                      onChange={(e) => setNewProduct(prev => ({ ...prev, localPrice: e.target.value }))}
-                      required
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
-
-              <Form.Group className="mb-3">
-                <Form.Label>Description</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={3}
-                  value={newProduct.description}
-                  onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
-                />
-              </Form.Group>
-
-            <Button 
-              type="submit" 
-              variant="primary" 
-              disabled={loading}
-              className="d-flex align-items-center"
-            >
-              {loading ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width="16" 
-                    height="16" 
-                    fill="currentColor" 
-                    className="bi bi-plus-circle me-1" 
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-                  </svg>
-                  Create Product
-                </>
-              )}
-              </Button>
-            </Form>
-        </Modal.Body>
-      </Modal>
+      {/* Replace the old Product Modal with the new reusable component */}
+      <ProductModal
+        show={showProductModal}
+        onHide={() => setShowProductModal(false)}
+        onAddProduct={handleAddProduct}
+        onCreateProduct={handleCreateProduct}
+        products={products}
+        loading={loading}
+        error={error}
+      />
 
       {/* Payment Confirmation Modal */}
       <Modal

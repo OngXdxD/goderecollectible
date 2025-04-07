@@ -70,10 +70,17 @@ const ViewInventory = () => {
     });
 
   // Get stock status badge variant
-  const getStockStatusVariant = (quantity) => {
-    if (quantity <= 0) return 'danger';
-    if (quantity <= 5) return 'warning';
-    return 'success';
+  const getStockStatusVariant = (quantity_ordered, quantity_received) => {
+    if (quantity_ordered < 0) return 'danger'; // Insufficient Stock
+    if (quantity_ordered > 0 && quantity_received === 0) return 'warning'; // Pending Release
+    return 'success'; // In Stock
+  };
+
+  // Get stock status text
+  const getStockStatusText = (quantity_ordered, quantity_received) => {
+    if (quantity_ordered < 0) return 'Insufficient Stock';
+    if (quantity_ordered > 0 && quantity_received === 0) return 'Pending Release';
+    return 'In Stock';
   };
 
   // Format currency
@@ -139,10 +146,21 @@ const ViewInventory = () => {
                       </th>
                       <th 
                         style={{ cursor: 'pointer' }}
-                        onClick={() => handleSort('quantity_on_hand')}
+                        onClick={() => handleSort('quantity_ordered')}
                       >
-                        Quantity
-                        {sortField === 'quantity_on_hand' && (
+                        Ordered
+                        {sortField === 'quantity_ordered' && (
+                          <span className="ms-1">
+                            {sortDirection === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </th>
+                      <th 
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handleSort('quantity_received')}
+                      >
+                        Stock On Hand
+                        {sortField === 'quantity_received' && (
                           <span className="ms-1">
                             {sortDirection === 'asc' ? '↑' : '↓'}
                           </span>
@@ -182,13 +200,13 @@ const ViewInventory = () => {
                       filteredAndSortedInventory.map((item) => (
                         <tr key={item.id}>
                           <td>{item.product?.name}</td>
-                          <td>{item.quantity_on_hand}</td>
+                          <td>{item.quantity_ordered}</td>
+                          <td>{item.quantity_received}</td>
                           <td>{formatCurrency(item.unit_cost)}</td>
-                          <td>{formatCurrency(item.unit_cost * item.quantity_on_hand)}</td>
+                          <td>{formatCurrency(item.unit_cost * item.quantity_received)}</td>
                           <td>
-                            <Badge bg={getStockStatusVariant(item.quantity_on_hand)}>
-                              {item.quantity_on_hand <= 0 ? 'Out of Stock' : 
-                               item.quantity_on_hand <= 5 ? 'Low Stock' : 'In Stock'}
+                            <Badge bg={getStockStatusVariant(item.quantity_ordered, item.quantity_received)}>
+                              {getStockStatusText(item.quantity_ordered, item.quantity_received)}
                             </Badge>
                           </td>
                         </tr>
