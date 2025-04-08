@@ -419,7 +419,7 @@ const ViewPurchaseOrders = () => {
         <PaymentModal
           show={showPaymentModal}
           onHide={() => setShowPaymentModal(false)}
-          order={selectedOrder}
+          order={{ ...selectedOrder, type: 'purchase_order' }}
           onSuccess={() => {
             setShowPaymentModal(false);
             setSelectedOrder(null);

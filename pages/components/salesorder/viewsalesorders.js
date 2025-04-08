@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { Card, Row, Col, Table, Button, Form, Alert, Badge, Modal } from 'react-bootstrap';
 import { fetchWithTokenRefresh } from '../../../shared/utils/auth';
+import { printSalesOrder, formatCurrency, formatDate } from '../../../shared/utils/printUtils';
 import Pageheader from "../../../shared/layout-components/pageheader/pageheader";
 import Seo from "../../../shared/layout-components/seo/seo";
 import Link from 'next/link';
@@ -19,6 +20,7 @@ const ViewSalesOrders = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [expandedRows, setExpandedRows] = useState(new Set());
+  const printRef = useRef(null);
 
   // Fetch sales orders
   const fetchSalesOrders = async () => {
@@ -129,23 +131,6 @@ const ViewSalesOrders = () => {
     }
   };
 
-  // Format currency
-  const formatCurrency = (amount, currency) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency || 'CNY'
-    }).format(amount);
-  };
-
-  // Format date
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
   const handleEdit = (order) => {
     router.push(`/components/salesorder/${order.id}`);
   };
@@ -171,6 +156,10 @@ const ViewSalesOrders = () => {
         setError('Error deleting sales order');
       }
     }
+  };
+
+  const handlePrint = (order) => {
+    printSalesOrder(order, formatCurrency, formatDate);
   };
 
   return (
@@ -330,6 +319,13 @@ const ViewSalesOrders = () => {
                                   Edit
                                 </Button>
                                 <Button
+                                  variant="success"
+                                  size="sm"
+                                  onClick={() => handlePrint(order)}
+                                >
+                                  Print
+                                </Button>
+                                <Button
                                   variant="danger"
                                   size="sm"
                                   onClick={() => handleDelete(order.id)}
@@ -387,7 +383,7 @@ const ViewSalesOrders = () => {
         <PaymentModal
           show={showPaymentModal}
           onHide={() => setShowPaymentModal(false)}
-          order={selectedOrder}
+          order={{ ...selectedOrder, type: 'sales_order' }}
           onSuccess={() => {
             setShowPaymentModal(false);
             setSelectedOrder(null);

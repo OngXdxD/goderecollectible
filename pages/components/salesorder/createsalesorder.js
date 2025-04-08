@@ -17,7 +17,7 @@ const CreateSalesOrder = () => {
     expected_delivery_date: '',
     remarks: '',
     payment_status: 'pending',
-    status: 'draft',
+    status: 'pending',
     attachment: null
   });
   const [customers, setCustomers] = useState([]);
@@ -60,7 +60,7 @@ const CreateSalesOrder = () => {
 
         // Fetch products
         const productsResponse = await fetchWithTokenRefresh(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/products`
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/all-products`
         );
         if (productsResponse.ok) {
           const productsData = await productsResponse.json();
@@ -409,12 +409,10 @@ const CreateSalesOrder = () => {
                             onChange={(e) => setSalesOrder(prev => ({ ...prev, status: e.target.value }))}
                             required
                           >
-                            <option value="draft">Draft</option>
                             <option value="pending">Pending</option>
                             <option value="confirmed">Confirmed</option>
                             <option value="shipped">Shipped</option>
                             <option value="delivered">Delivered</option>
-                            <option value="completed">Completed</option>
                             <option value="cancelled">Cancelled</option>
                           </Form.Select>
                         </Form.Group>

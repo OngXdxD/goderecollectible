@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { Fragment, useEffect, useState, useRef } from "react";
 import { Button, Card, Dropdown, Form, ListGroup, Nav, NavLink, Offcanvas, Tab } from "react-bootstrap";
@@ -357,118 +356,8 @@ function Header({ local_varaiable, ThemeChanger }) {
 						<div className="header-element">
 							<Link aria-label="Hide Sidebar" onClick={() => toggleSidebar()} className="sidemenu-toggle header-link animated-arrow hor-toggle horizontal-navtoggle" data-bs-toggle="sidebar" href="#!"><span></span></Link>
 						</div>
-
-						{/* Search field */}
-						<div className="main-header-center ms-4 d-sm-none d-md-none d-lg-block form-group">
-							<Form.Control
-								type="text"
-								className=" "
-								id="typehead"
-								placeholder="Search for results..."
-								onClick={() => { }}
-								autoComplete="off"
-								ref={searchRef}
-								defaultValue={InputValue}
-								onChange={(ele => { myfunction(ele.target.value); setInputValue(ele.target.value); })}
-							/>
-							<Button variant="" className="btn"><i className="fas fa-search"></i></Button>
-							{showa ?
-								<Card className=" search-result position-relative z-index-9 search-fix  border mt-1 ">
-									<Card.Header className="">
-										<Card.Title as="h6" className="">Search result of {InputValue}</Card.Title>
-									</Card.Header>
-									<ListGroup className='my-2 search_drop'>
-										{show2 ?
-											NavData.map((e) =>
-												<ListGroup.Item key={Math.random()} className="">
-													<Link href={`${e.path}/`} className='search-result-item' onClick={() => { setShow1(false), setInputValue(""); }}><i className="fe fe-chevron-right me-2 d-inline-block"></i>{e.title}</Link>
-												</ListGroup.Item>
-											)
-											: <b className={`${searchcolor} list-group-item`}>{searchval}</b>}
-									</ListGroup>
-								</Card>
-								: ""}
-						</div>
 					</div>
 					<div className="header-content-right">
-						{/* Search field in small screen */}
-						<div className="header-element header-search d-block d-sm-none">
-							<Dropdown className="header_searchbar" autoClose="outside" >
-								<Dropdown.Toggle as="a" href="#!" className="header-link dropdown-toggle" data-bs-toggle="dropdown">
-									<svg xmlns="http://www.w3.org/2000/svg" className="header-link-icon" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none" /><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" /></svg>
-								</Dropdown.Toggle>
-
-								<Dropdown.Menu as="ul" className="main-header-dropdown dropdown-menu dropdown-menu-end" data-popper-placement="none">
-									<li>
-										<Dropdown.Item as="span" className=" d-flex align-items-center" >
-											<span className="input-group">
-												<input type="text" className="form-control" placeholder="Search..." aria-label="Search input" aria-describedby="button-addon2" />
-												{/* <button className="btn btn-primary" type="button" id="button-addon2">Search</button>*/}
-
-												<button className="btn btn-primary" type="button" id="button-addon2">Search</button>
-											</span>
-										</Dropdown.Item>
-									</li>
-								</Dropdown.Menu>
-							</Dropdown>
-						</div>
-
-						{/* country flag */}
-						<Dropdown className="header-element country-selector">
-							<Dropdown.Toggle variant='' className="header-link dropdown-toggle no-caret border-0" data-bs-auto-close="outside" data-bs-toggle="dropdown">
-								<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/flags/us_flag.jpg`} className="rounded-circle header-link-icon" alt="image" />
-							</Dropdown.Toggle>
-							<Dropdown.Menu as="ul" className="main-header-dropdown dropdown-menu dropdown-menu-end" data-popper-placement="none">
-								<li>
-									<Link className="dropdown-item d-flex align-items-center" href="#!">
-										<span className="avatar avatar-xs lh-1 me-2">
-											<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/flags/us_flag.jpg`} alt="image" />
-										</span>
-										English
-									</Link>
-								</li>
-								<li>
-									<Link className="dropdown-item d-flex align-items-center" href="#!">
-										<span className="avatar avatar-xs lh-1 me-2">
-											<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/flags/spain_flag.jpg`} alt="img" />
-										</span>
-										Spanish
-									</Link>
-								</li>
-								<li>
-									<Link className="dropdown-item d-flex align-items-center" href="#!">
-										<span className="avatar avatar-xs lh-1 me-2">
-											<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/flags/french_flag.jpg`} alt="img" />
-										</span>
-										French
-									</Link>
-								</li>
-								<li>
-									<Link className="dropdown-item d-flex align-items-center" href="#!">
-										<span className="avatar avatar-xs lh-1 me-2">
-											<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/flags/germany_flag.jpg`} alt="img" />
-										</span>
-										German
-									</Link>
-								</li>
-								<li>
-									<Link className="dropdown-item d-flex align-items-center" href="#!">
-										<span className="avatar avatar-xs lh-1 me-2">
-											<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/flags/italy_flag.jpg`} alt="img" />
-										</span>
-										Italian
-									</Link>
-								</li>
-								<li>
-									<Link className="dropdown-item d-flex align-items-center" href="#!">
-										<span className="avatar avatar-xs lh-1 me-2">
-											<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/flags/russia_flag.jpg`} alt="img" />
-										</span>
-										Russian
-									</Link>
-								</li>
-							</Dropdown.Menu>
-						</Dropdown>
 
 						{/* Toggle dark icon */}
 						<div className="header-element header-theme-mode">
@@ -479,7 +368,7 @@ function Header({ local_varaiable, ThemeChanger }) {
 								</span>
 								<span className="dark-layout">
 
-									<svg xmlns="http://www.w3.org/2000/svg" className="header-link-icon" width="24" height="24" viewBox="0 0 24 24"><path d="M6.993 12c0 2.761 2.246 5.007 5.007 5.007s5.007-2.246 5.007-5.007S14.761 6.993 12 6.993 6.993 9.239 6.993 12zM12 8.993c1.658 0 3.007 1.349 3.007 3.007S13.658 15.007 12 15.007 8.993 13.658 8.993 12 10.342 8.993 12 8.993zM10.998 19h2v3h-2zm0-17h2v3h-2zm-9 9h3v2h-3zm17 0h3v2h-3zM4.219 18.363l2.12-2.122 1.415 1.414-2.12 2.122zM16.24 6.344l2.122-2.122 1.414 1.414-2.122 2.122zM6.342 7.759 4.22 5.637l1.415-1.414 2.12 2.122zm13.434 10.605-1.414 1.414-2.122-2.122 1.414-1.414z" /></svg>
+									<svg xmlns="http://www.w3.org/2000/svg" className="header-link-icon" width="24" height="24" viewBox="0 0 24 24"><path d="M6.993 12c0 2.761 2.246 5.007 5.007 5.007s5.007-2.246 5.007-5.007S14.761 6.993 12 6.993 6.993 9.239 6.993 12zM12 8.993c1.658 0 3.007 1.349 3.007 3.007S13.658 15.007 12 15.007 8.993 13.658 8.993 12 10.342 8.993 12 8.993zM10.998 19h2v3h-2zm0-17h2v3h-2zm-9 9h3v2h-3zm17 0h3v2h-3zM4.219 18.363l2.12-2.122 1.415 1.414-2.12 2.122zM16.24 6.344l2.122-2.122 1.414 1.414-2.122 2.122zm6.342 10.605-1.414 1.414-2.122-2.122 1.414-1.414z" /></svg>
 
 								</span>
 							</Link>
@@ -604,120 +493,6 @@ function Header({ local_varaiable, ThemeChanger }) {
 							</Dropdown.Menu>
 						</Dropdown>
 
-						{/* related apps */}
-						<Dropdown className="header-element header-shortcuts-dropdown d-md-block d-none">
-							<Dropdown.Toggle variant='' href="#!" className="header-link dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" id="notificationDropdown" aria-expanded="false">
-								<svg xmlns="http://www.w3.org/2000/svg" className="header-link-icon" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none" /><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z" /></svg>
-							</Dropdown.Toggle>
-							<Dropdown.Menu as="ul" className="main-header-dropdown header-shortcuts-dropdown dropdown-menu pb-0 dropdown-menu-end" aria-labelledby="notificationDropdown">
-								<div className="p-3">
-									<div className="d-flex align-items-center justify-content-between">
-										<p className="mb-0 fs-17 fw-semibold">Related Apps</p>
-									</div>
-								</div>
-								<div className="dropdown-divider mb-0"></div>
-								<div className="main-header-shortcuts p-2" id="header-shortcut-scroll">
-									<div className="row g-2">
-										<div className="col-4">
-											<Link href="#!">
-												<div className="text-center p-3 related-app">
-													<span className="avatar avatar-sm avatar-rounded">
-														<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/apps/figma.png`} alt="" />
-													</span>
-													<span className="d-block fs-12">Figma</span>
-												</div>
-											</Link>
-										</div>
-										<div className="col-4">
-											<Link href="#!">
-												<div className="text-center p-3 related-app">
-													<span className="avatar avatar-sm avatar-rounded">
-														<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/apps/microsoft-powerpoint.png`} alt="" />
-													</span>
-													<span className="d-block fs-12">Power Point</span>
-												</div>
-											</Link>
-										</div>
-										<div className="col-4">
-											<Link href="#!">
-												<div className="text-center p-3 related-app">
-													<span className="avatar avatar-sm avatar-rounded">
-														<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/apps/microsoft-word.png`} alt="" />
-													</span>
-													<span className="d-block fs-12">MS Word</span>
-												</div>
-											</Link>
-										</div>
-										<div className="col-4">
-											<Link href="#!">
-												<div className="text-center p-3 related-app">
-													<span className="avatar avatar-sm avatar-rounded">
-														<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/apps/calender.png`} alt="" />
-													</span>
-													<span className="d-block fs-12">Calendar</span>
-												</div>
-											</Link>
-										</div>
-										<div className="col-4">
-											<Link href="#!">
-												<div className="text-center p-3 related-app">
-													<span className="avatar avatar-sm avatar-rounded">
-														<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/apps/sketch.png`} alt="" />
-													</span>
-													<span className="d-block fs-12">Sketch</span>
-												</div>
-											</Link>
-										</div>
-										<div className="col-4">
-											<Link href="#!">
-												<div className="text-center p-3 related-app">
-													<span className="avatar avatar-sm avatar-rounded">
-														<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/apps/google-docs.png`} alt="" />
-													</span>
-													<span className="d-block fs-12">Docs</span>
-												</div>
-											</Link>
-										</div>
-										<div className="col-4">
-											<Link href="#!">
-												<div className="text-center p-3 related-app">
-													<span className="avatar avatar-sm avatar-rounded">
-														<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/apps/google.png`} alt="" />
-													</span>
-													<span className="d-block fs-12">Google</span>
-												</div>
-											</Link>
-										</div>
-										<div className="col-4">
-											<Link href="#!">
-												<div className="text-center p-3 related-app">
-													<span className="avatar avatar-sm avatar-rounded">
-														<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/apps/translate.png`} alt="" />
-													</span>
-													<span className="d-block fs-12">Translate</span>
-												</div>
-											</Link>
-										</div>
-										<div className="col-4">
-											<Link href="#!">
-												<div className="text-center p-3 related-app">
-													<span className="avatar avatar-sm avatar-rounded">
-														<img src={`${process.env.NODE_ENV === "production" ? basePath : ""}/assets/images/apps/google-sheets.png`} alt="" />
-													</span>
-													<span className="d-block fs-12">Sheets</span>
-												</div>
-											</Link>
-										</div>
-									</div>
-								</div>
-								<div className="p-3 border-top">
-									<div className="d-grid">
-										<Link href="#!" className="btn btn-primary">View All</Link>
-									</div>
-								</div>
-							</Dropdown.Menu>
-						</Dropdown>
-
 						{/* Fullscreen icon */}
 						<div className="header-element header-fullscreen">
 
@@ -791,7 +566,6 @@ function Header({ local_varaiable, ThemeChanger }) {
 									<Nav.Item>
 										<Nav.Link eventKey="third"><svg xmlns="http://www.w3.org/2000/svg" className="side-menu__icon" height="24" version="1.1" width="24" viewBox="0 0 24 24"><path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M7.07,18.28C7.5,17.38 10.12,16.5 12,16.5C13.88,16.5 16.5,17.38 16.93,18.28C15.57,19.36 13.86,20 12,20C10.14,20 8.43,19.36 7.07,18.28M18.36,16.83C16.93,15.09 13.46,14.5 12,14.5C10.54,14.5 7.07,15.09 5.64,16.83C4.62,15.5 4,13.82 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,13.82 19.38,15.5 18.36,16.83M12,6C10.06,6 8.5,7.56 8.5,9.5C8.5,11.44 10.06,13 12,13C13.94,13 15.5,11.44 15.5,9.5C15.5,7.56 13.94,6 12,6M12,11C11.17,11 10.5,10.33 10.5,9.5C10.5,8.67 11.17,8 12,8C12.83,8 13.5,8.67 13.5,9.5C13.5,10.33 12.83,11 12,11Z" /></svg> Friends</Nav.Link>
 									</Nav.Item>
-
 								</Nav>
 							</div>
 
