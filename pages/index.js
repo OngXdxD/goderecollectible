@@ -6,12 +6,34 @@ import { Alert, Button, Card, Col, Container, Form, Nav, Tab } from "react-boots
 import Link from "next/link";
 import { useEffect } from "react";
 import Seo from "../shared/layout-components/seo/seo";
+import { checkAuthAndRedirect } from "../shared/utils/auth";
 
 export default function AdminLogin() {
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [rememberMe, setRememberMe] = useState(false);
 	const [errorMessage, setErrorMessage] = useState('');
+	const [isLoading, setIsLoading] = useState(true);
+
+	// Check if user is already logged in
+	useEffect(() => {
+		const autoLogin = async () => {
+			try {
+				setIsLoading(true);
+				// Attempt auto-login if tokens exist
+				const isLoggedIn = await checkAuthAndRedirect();
+				if (!isLoggedIn) {
+					// Not logged in, show login form
+					setIsLoading(false);
+				}
+			} catch (error) {
+				console.error('Auto-login error:', error);
+				setIsLoading(false);
+			}
+		};
+
+		autoLogin();
+	}, []);
 
 	useEffect(() => {
 		const rememberedUsername = localStorage.getItem('rememberedUsername');
@@ -54,9 +76,10 @@ export default function AdminLogin() {
 			const expirationDate = new Date();
 			expirationDate.setDate(expirationDate.getDate() + 7);
 
-			            // Store auth data in localStorage
-						localStorage.setItem('refresh-token', data.tokens.refresh.token);
-						localStorage.setItem('access-token', data.tokens.access.token);
+			// Store auth data in localStorage
+			localStorage.setItem('refresh-token', data.tokens.refresh.token);
+			localStorage.setItem('access-token', data.tokens.access.token);
+			
 			// Store auth data in cookies
 			document.cookie = `access-token=${data.tokens.access.token}; expires=${expirationDate.toUTCString()}; path=/; secure; samesite=Strict`;
 			document.cookie = `refresh-token=${data.tokens.refresh.token}; expires=${expirationDate.toUTCString()}; path=/; secure; samesite=Strict`;
@@ -91,6 +114,16 @@ export default function AdminLogin() {
 		};
 	}, []);
 
+	if (isLoading) {
+		return (
+			<div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
+				<div className="spinner-border text-primary" role="status">
+					<span className="visually-hidden">Loading...</span>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<Fragment>
 			<Seo title={"Login"} />
@@ -114,7 +147,6 @@ export default function AdminLogin() {
 			<Container>
 				<div className="row justify-content-center align-items-center authentication authentication-basic h-100">
 					<div className="col-xl-5 col-lg-6 col-md-8 col-sm-8 col-xs-10 card-sigin-main mx-auto my-auto py-4 justify-content-center">
-
 						<div className="card-sigin">
 							<Tab.Container defaultActiveKey='nextjs'>
 								<Nav variant="pills" className="justify-content-center authentication-tabs">
@@ -166,6 +198,15 @@ export default function AdminLogin() {
 
 																				</div>
 																			</div>
+																			<div className="form-group mb-3">
+																				<Form.Check
+																					type="checkbox"
+																					id="rememberMe"
+																					label="Remember me"
+																					checked={rememberMe}
+																					onChange={(e) => setRememberMe(e.target.checked)}
+																				/>
+																			</div>
 																			<Button className="btn btn-primary btn-block" onClick={handleLogin}>Sign In</Button>
 
 																		</form>
@@ -213,6 +254,15 @@ export default function AdminLogin() {
 																						required />
 
 																				</div>
+																			</div>
+																			<div className="form-group mb-3">
+																				<Form.Check
+																					type="checkbox"
+																					id="rememberMeFirebase"
+																					label="Remember me"
+																					checked={rememberMe}
+																					onChange={(e) => setRememberMe(e.target.checked)}
+																				/>
 																			</div>
 																			<Link href="/components/dashboards/dashboard1" className="btn btn-primary btn-block" onClick={handleLogin}>Sign In</Link>
 

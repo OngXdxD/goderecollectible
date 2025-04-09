@@ -55,8 +55,22 @@ const ViewAllProducts = () => {
       }
 
       const data = await response.json();
-      setProducts(data || []);
-      setTotalPages(Math.ceil((data.totalResults || 0) / limit));
+      
+      // Check if data is already an array (direct response format)
+      // or if it has a data property containing the products
+      const productsData = Array.isArray(data) ? data : (data.data || []);
+      
+      setProducts(productsData);
+      
+      // Set total pages based on response metadata if available
+      if (data.totalPages) {
+        setTotalPages(data.totalPages);
+      } else if (data.totalResults) {
+        setTotalPages(Math.ceil(data.totalResults / limit));
+      } else {
+        // If no pagination info, assume we have all results
+        setTotalPages(1);
+      }
     } catch (err) {
       console.error('Error fetching products:', err);
       setError(err.message || 'An error occurred while fetching products');
@@ -120,6 +134,27 @@ const ViewAllProducts = () => {
         />
       </div>
     );
+  };
+
+  // Get the url from platform_urls array
+  const getProductUrl = (platformUrls, urlType) => {
+    if (!platformUrls || !Array.isArray(platformUrls) || platformUrls.length === 0) {
+      return null;
+    }
+
+    // Find the first URL that has the requested type
+    for (const urlObj of platformUrls) {
+      if (urlObj && urlObj[urlType]) {
+        return urlObj[urlType];
+      }
+    }
+    
+    return null;
+  };
+
+  // Handle pagination
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
   return (
@@ -216,7 +251,11 @@ const ViewAllProducts = () => {
                     <tbody>
                       {loading ? (
                         <tr>
-                          <td colSpan="9" className="text-center py-4">Loading...</td>
+                          <td colSpan="9" className="text-center py-4">
+                            <div className="spinner-border text-primary" role="status">
+                              <span className="visually-hidden">Loading...</span>
+                            </div>
+                          </td>
                         </tr>
                       ) : !Array.isArray(products) || products.length === 0 ? (
                         <tr>
@@ -239,10 +278,11 @@ const ViewAllProducts = () => {
                               </div>
                             </td>
                             <td>{product.brand || '-'}</td>
-                            <td>{product.category}</td>
+                            <td>{product.category || '-'}</td>
                             <td>{formatPrice(product.foreign_selling_price, product.currency)}</td>
                             <td>{formatPrice(product.local_selling_price, 'MYR')}</td>
                             <td>
+                              {/* Shopee URL */}
                               {product.shopee_url ? (
                                 <a 
                                   href={product.shopee_url} 
@@ -252,14 +292,9 @@ const ViewAllProducts = () => {
                                 >
                                   Click here
                                 </a>
-                              ) : (
-                                <span className="text-muted">-</span>
-                              )}
-                            </td>
-                            <td>
-                              {product.wix_url ? (
+                              ) : getProductUrl(product.platform_urls, 'shopee_url') ? (
                                 <a 
-                                  href={product.wix_url} 
+                                  href={getProductUrl(product.platform_urls, 'shopee_url')} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="btn btn-link btn-sm p-0"
@@ -271,8 +306,40 @@ const ViewAllProducts = () => {
                               )}
                             </td>
                             <td>
-                              <button className="btn btn-primary btn-sm me-2">Edit</button>
-                              <button className="btn btn-danger btn-sm">Delete</button>
+                              {/* Wix URL */}
+                              {getProductUrl(product.platform_urls, 'wix_url') ? (
+                                <a 
+                                  href={getProductUrl(product.platform_urls, 'wix_url')} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="btn btn-link btn-sm p-0"
+                                >
+                                  Click here
+                                </a>
+                              ) : (
+                                <span className="text-muted">-</span>
+                              )}
+                            </td>
+                            <td>
+                              <Button 
+                                variant="primary" 
+                                size="sm" 
+                                className="me-2"
+                                onClick={() => window.location.href = `/components/product/edit-all-product/${product.id}`}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                variant="danger" 
+                                size="sm"
+                                onClick={() => {
+                                  if (window.confirm('Are you sure you want to delete this product?')) {
+                                    // Handle delete
+                                  }
+                                }}
+                              >
+                                Delete
+                              </Button>
                             </td>
                           </tr>
                         ))
@@ -282,34 +349,48 @@ const ViewAllProducts = () => {
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
+                {!loading && totalPages > 1 && (
                   <div className="d-flex justify-content-center mt-4">
                     <Pagination>
-                      <Pagination.First
-                        onClick={() => setCurrentPage(1)}
+                      <Pagination.First 
+                        onClick={() => handlePageChange(1)} 
                         disabled={currentPage === 1}
                       />
-                      <Pagination.Prev
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      <Pagination.Prev 
+                        onClick={() => handlePageChange(currentPage - 1)} 
                         disabled={currentPage === 1}
                       />
                       
-                      {[...Array(totalPages)].map((_, idx) => (
-                        <Pagination.Item
-                          key={idx + 1}
-                          active={currentPage === idx + 1}
-                          onClick={() => setCurrentPage(idx + 1)}
-                        >
-                          {idx + 1}
-                        </Pagination.Item>
-                      ))}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        // Show pagination items around the current page
+                        let pageNumber;
+                        if (totalPages <= 5) {
+                          pageNumber = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNumber = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNumber = totalPages - 4 + i;
+                        } else {
+                          pageNumber = currentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <Pagination.Item
+                            key={pageNumber}
+                            active={pageNumber === currentPage}
+                            onClick={() => handlePageChange(pageNumber)}
+                          >
+                            {pageNumber}
+                          </Pagination.Item>
+                        );
+                      })}
                       
-                      <Pagination.Next
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      <Pagination.Next 
+                        onClick={() => handlePageChange(currentPage + 1)} 
                         disabled={currentPage === totalPages}
                       />
-                      <Pagination.Last
-                        onClick={() => setCurrentPage(totalPages)}
+                      <Pagination.Last 
+                        onClick={() => handlePageChange(totalPages)} 
                         disabled={currentPage === totalPages}
                       />
                     </Pagination>

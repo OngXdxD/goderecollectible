@@ -297,7 +297,61 @@ export const MENUITEMS = [
 				title: "Add Supplier",
 			},
 		],
-	}
+	},
+	{
+		menutitle: "System Settings",
+		roles: [1], // Only admin can access settings
+	},
+	{
+		title: "Settings",
+		icon: (
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				className="side-menu__icon"
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="2"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			>
+				<circle cx="12" cy="12" r="3"></circle>
+				<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+			</svg>
+		),
+		type: "sub",
+		selected: false,
+		active: false,
+		roles: [1],
+		children: [
+			{
+				path: "/components/settings/wix-config",
+				type: "link",
+				active: false,
+				selected: false,
+				title: "Wix Configuration",
+				roles: [1],
+			},
+			{
+				path: "/components/settings/company-info",
+				type: "link",
+				active: false,
+				selected: false,
+				title: "Company Information",
+				roles: [1],
+			},
+			{
+				path: "/components/settings/user-management",
+				type: "link",
+				active: false,
+				selected: false,
+				title: "User Management",
+				roles: [1],
+			}
+		],
+	},
 ];
 
 // Function to filter menu items based on user role

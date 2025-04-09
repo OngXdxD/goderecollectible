@@ -64,7 +64,7 @@ export const fetchWithTokenRefresh = async (url, options = {}) => {
     });
 
     // If unauthorized, try to refresh token and retry the request
-    if ((response.status === 401 || response.status === 500 ) && token) {
+    if (response.status === 401 && token) {
       try {
         const newToken = await refreshTokens();
         const retryResponse = await fetch(url, {
